@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 #pragma once
+#include <config.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -24,7 +25,7 @@
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/vector.hpp>
 #include <chrono>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <phosphor-logging/elog-errors.hpp>
@@ -71,14 +72,14 @@ struct EventDeleter
 {
     void operator()(sd_event *event) const
     {
-        event = sd_event_unref(event);
+        sd_event_unref(event);
     }
 };
 using EventPtr = std::unique_ptr<sd_event, EventDeleter>;
 using primarycode_t = uint64_t;
 using secondarycode_t = std::vector<uint8_t>;
 using postcode_t = std::tuple<primarycode_t, secondarycode_t>;
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 namespace StateServer = sdbusplus::xyz::openbmc_project::State::server;
 
 using post_code =
@@ -91,7 +92,7 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     PostCodeDataHolder *postcodeDataHolderObj =
         postcodeDataHolderObj->getInstance();
 
-    PostCode(sdbusplus::bus::bus &bus, const char *path, EventPtr &event) :
+    PostCode(sdbusplus::bus::bus &bus, const char *path, EventPtr & /*event*/) :
         sdbusplus::server::object_t<post_code, delete_all>(bus, path), bus(bus),
         propertiesChangedSignalRaw(
             bus,
