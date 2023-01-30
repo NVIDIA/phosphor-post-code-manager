@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iostream>
 #include <phosphor-logging/elog-errors.hpp>
+#include <sdbusplus/timer.hpp>
 #include <xyz/openbmc_project/Collection/DeleteAll/server.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 #include <xyz/openbmc_project/State/Boot/PostCode/server.hpp>
@@ -90,8 +91,10 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     PostCodeDataHolder postcodeDataHolderObj =
         PostCodeDataHolder::getInstance();
 
-    PostCode(sdbusplus::bus::bus &bus, const char *path, EventPtr & /*event*/) :
-        sdbusplus::server::object_t<post_code, delete_all>(bus, path), bus(bus),
+    PostCode(sdbusplus::bus::bus &bus, const char *path,
+             EventPtr &event /*event*/) :
+        sdbusplus::server::object_t<post_code, delete_all>(bus, path),
+        bus(bus), event(event),
         propertiesChangedSignalRaw(
             bus,
             sdbusplus::bus::match::rules::type::signal() +
@@ -189,7 +192,9 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     void incrBootCycle();
     uint16_t getBootNum(const uint16_t index) const;
 
+    std::unique_ptr<phosphor::Timer> timer;
     sdbusplus::bus::bus &bus;
+    EventPtr &event;
     std::chrono::time_point<std::chrono::steady_clock> firstPostCodeTimeSteady;
     uint64_t firstPostCodeUsSinceEpoch;
     std::map<uint64_t, postcode_t> postCodes;
