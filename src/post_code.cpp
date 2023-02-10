@@ -15,20 +15,23 @@
 */
 #include "post_code.hpp"
 
-#include "iomanip"
+#include <cereal/access.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/cereal.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/tuple.hpp>
+#include <cereal/types/vector.hpp>
+
+#include <iomanip>
 
 const static constexpr auto timeoutMicroSeconds = 1000000;
 
 void PostCode::deleteAll()
 {
-    auto dir = fs::path(postcodeDataHolderObj.PostCodeListPathPrefix +
-                        std::to_string(postcodeDataHolderObj.node));
-    std::uintmax_t n = fs::remove_all(dir);
+    std::uintmax_t n = fs::remove_all(postCodeListPath);
     std::cerr << "clearPostCodes deleted " << n << " files in "
-              << postcodeDataHolderObj.PostCodeListPathPrefix +
-                     std::to_string(postcodeDataHolderObj.node)
-              << std::endl;
-    fs::create_directories(dir);
+              << postCodeListPath << std::endl;
+    fs::create_directories(postCodeListPath);
     postCodes.clear();
     currentBootCycleIndex = 0;
     currentBootCycleCount(0);
@@ -48,8 +51,7 @@ std::vector<postcode_t> PostCode::getPostCodes(uint16_t index)
         uint16_t bootNum = getBootNum(index);
 
         decltype(postCodes) codes;
-        deserializePostCodes(
-            fs::path(strPostCodeListPath + std::to_string(bootNum)), codes);
+        deserializePostCodes(postCodeListPath / std::to_string(bootNum), codes);
         std::transform(codes.begin(), codes.end(), std::back_inserter(codesVec),
                        [](const auto& kv) { return kv.second; });
     }
@@ -66,8 +68,7 @@ std::map<uint64_t, postcode_t>
 
     uint16_t bootNum = getBootNum(index);
     decltype(postCodes) codes;
-    deserializePostCodes(
-        fs::path(strPostCodeListPath + std::to_string(bootNum)), codes);
+    deserializePostCodes(postCodeListPath / std::to_string(bootNum), codes);
     return codes;
 }
 
@@ -75,9 +76,8 @@ void PostCode::savePostCodes(postcode_t code)
 {
     if (!timer)
     {
-        timer = std::make_unique<phosphor::Timer>(event.get(), [this]() {
-            serialize(fs::path(strPostCodeListPath));
-        });
+        timer = std::make_unique<phosphor::Timer>(
+            [this]() { serialize(postCodeListPath); });
     }
 
     // steady_clock is a monotonic clock that is guaranteed to never be adjusted
@@ -102,6 +102,10 @@ void PostCode::savePostCodes(postcode_t code)
     }
 
     postCodes.insert(std::make_pair(tsUS, code));
+    if (postCodes.size() > MAX_POST_CODE_SIZE_PER_CYCLE)
+    {
+        postCodes.erase(postCodes.begin());
+    }
     if (!timer->isRunning())
     {
         timer->start(std::chrono::microseconds(timeoutMicroSeconds));
@@ -133,24 +137,21 @@ void PostCode::savePostCodes(postcode_t code)
     return;
 }
 
-fs::path PostCode::serialize(const std::string& path)
+fs::path PostCode::serialize(const fs::path& path)
 {
     try
     {
-        fs::path idxPath(path + strCurrentBootCycleIndexName);
-        std::ofstream osIdx(idxPath.c_str(), std::ios::binary);
-        cereal::JSONOutputArchive idxArchive(osIdx);
+        std::ofstream osIdx(path / CurrentBootCycleIndexName, std::ios::binary);
+        cereal::BinaryOutputArchive idxArchive(osIdx);
         idxArchive(currentBootCycleIndex);
 
         uint16_t count = currentBootCycleCount();
-        fs::path cntPath(path + strCurrentBootCycleCountName);
-        std::ofstream osCnt(cntPath.c_str(), std::ios::binary);
-        cereal::JSONOutputArchive cntArchive(osCnt);
+        std::ofstream osCnt(path / CurrentBootCycleCountName, std::ios::binary);
+        cereal::BinaryOutputArchive cntArchive(osCnt);
         cntArchive(count);
 
-        std::ofstream osPostCodes(
-            (path + std::to_string(currentBootCycleIndex)));
-        cereal::JSONOutputArchive oarchivePostCodes(osPostCodes);
+        std::ofstream osPostCodes(path / std::to_string(currentBootCycleIndex));
+        cereal::BinaryOutputArchive oarchivePostCodes(osPostCodes);
         oarchivePostCodes(postCodes);
     }
     catch (const cereal::Exception& e)
@@ -172,8 +173,8 @@ bool PostCode::deserialize(const fs::path& path, uint16_t& index)
     {
         if (fs::exists(path))
         {
-            std::ifstream is(path.c_str(), std::ios::in | std::ios::binary);
-            cereal::JSONInputArchive iarchive(is);
+            std::ifstream is(path, std::ios::in | std::ios::binary);
+            cereal::BinaryInputArchive iarchive(is);
             iarchive(index);
             return true;
         }
@@ -199,8 +200,8 @@ bool PostCode::deserializePostCodes(const fs::path& path,
     {
         if (fs::exists(path))
         {
-            std::ifstream is(path.c_str(), std::ios::in | std::ios::binary);
-            cereal::JSONInputArchive iarchive(is);
+            std::ifstream is(path, std::ios::in | std::ios::binary);
+            cereal::BinaryInputArchive iarchive(is);
             iarchive(codes);
             return true;
         }
