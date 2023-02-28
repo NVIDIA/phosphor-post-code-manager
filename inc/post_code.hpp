@@ -63,9 +63,10 @@ using delete_all =
 
 struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
 {
-    PostCode(sdbusplus::bus_t& bus, const char* path, int nodeIndex) :
-        sdbusplus::server::object_t<post_code, delete_all>(bus, path), bus(bus),
-        node(nodeIndex),
+    PostCode(sdbusplus::bus_t& bus, const char* path, EventPtr& event,
+             int nodeIndex) :
+        sdbusplus::server::object_t<post_code, delete_all>(bus, path),
+        bus(bus), event(event), node(nodeIndex),
         postCodeListPath(PostCodeListPathPrefix + std::to_string(node)),
         propertiesChangedSignalRaw(
             bus,
@@ -140,6 +141,7 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
 
     std::unique_ptr<phosphor::Timer> timer;
     sdbusplus::bus_t& bus;
+    EventPtr& event;
     int node;
     std::chrono::time_point<std::chrono::steady_clock> firstPostCodeTimeSteady;
     uint64_t firstPostCodeUsSinceEpoch;

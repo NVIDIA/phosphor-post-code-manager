@@ -77,7 +77,7 @@ void PostCode::savePostCodes(postcode_t code)
     if (!timer)
     {
         timer = std::make_unique<phosphor::Timer>(
-            [this]() { serialize(postCodeListPath); });
+            event.get(), [this]() { serialize(postCodeListPath); });
     }
 
     // steady_clock is a monotonic clock that is guaranteed to never be adjusted
@@ -106,6 +106,7 @@ void PostCode::savePostCodes(postcode_t code)
     {
         postCodes.erase(postCodes.begin());
     }
+
     if (!timer->isRunning())
     {
         timer->start(std::chrono::microseconds(timeoutMicroSeconds));
