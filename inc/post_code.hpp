@@ -38,7 +38,7 @@ const static constexpr char* CurrentBootCycleIndexName =
 const static constexpr char* PostCodePath =
     "/xyz/openbmc_project/state/boot/raw";
 const static constexpr char* PostCodeListPathPrefix =
-    "/var/lib/phosphor-post-code-manager/host";
+    "/var/lib/logging/phosphor-post-code-manager/host";
 const static constexpr char* HostStatePathPrefix =
     "/xyz/openbmc_project/state/host";
 
