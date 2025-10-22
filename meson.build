@@ -81,6 +81,7 @@ executable(
     'post-code-manager',
     'src/main.cpp',
     'src/post_code.cpp',
+    'src/nvidia_post_code_handler.cpp',
     install: true,
     dependencies: [
         sdbusplus,

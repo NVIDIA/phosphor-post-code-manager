@@ -15,6 +15,8 @@
 */
 #include "post_code.hpp"
 
+#include "nvidia_post_code_handler.hpp"
+
 #include <cereal/access.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/cereal.hpp>
@@ -34,6 +36,49 @@ const static constexpr auto timeoutMicroSeconds = 1000000;
 constexpr auto SYSTEMD_SERVICE = "org.freedesktop.systemd1";
 constexpr auto SYSTEMD_ROOT = "/org/freedesktop/systemd1";
 constexpr auto SYSTEMD_INTERFACE = "org.freedesktop.systemd1.Manager";
+
+// NVIDIA Code Start
+const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
+{
+    const auto& [primaryCode, secondaryCode] = code;
+
+    for (const auto& handler : handlers)
+    {
+        bool primaryMatches = false;
+
+        // NVIDIA: Check if mask is defined for flexible matching
+        if (handler.mask && handler.mask->size() == handler.primary.size() &&
+            handler.mask->size() == primaryCode.size())
+        {
+            // NVIDIA: Apply mask: match if (code & mask) == (primary & mask)
+            primaryMatches = true;
+            for (size_t i = 0; i < primaryCode.size(); ++i)
+            {
+                uint8_t maskedCode = primaryCode[i] & (*handler.mask)[i];
+                uint8_t maskedPrimary = handler.primary[i] & (*handler.mask)[i];
+                if (maskedCode != maskedPrimary)
+                {
+                    primaryMatches = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // No mask: use exact match (standard upstream behavior)
+            primaryMatches = (handler.primary == primaryCode);
+        }
+
+        // Check secondary code if primary matches
+        if (primaryMatches &&
+            (!handler.secondary || *handler.secondary == secondaryCode))
+        {
+            return &handler;
+        }
+    }
+    return nullptr;
+}
+// NVIDIA Code End
 
 void PostCodeEvent::raise() const
 {
@@ -106,6 +151,19 @@ void from_json(const json& j, PostCodeHandler& handler)
         j.at("event").get_to(event);
         handler.event = event;
     }
+    // NVIDIA: Code
+    if (j.contains("mask"))
+    {
+        std::string mask;
+        j.at("mask").get_to(mask);
+        handler.mask = decodeHexString(mask);
+    }
+    if (j.contains("resolution"))
+    {
+        std::string resolution;
+        j.at("resolution").get_to(resolution);
+        handler.resolution = resolution;
+    }
 }
 
 const PostCodeHandler* PostCodeHandlers::find(postcode_t code)
@@ -123,7 +181,9 @@ const PostCodeHandler* PostCodeHandlers::find(postcode_t code)
 
 void PostCodeHandlers::handle(postcode_t code)
 {
-    const PostCodeHandler* handler = find(code);
+    // NVIDIA: Use findWithMask() to support both exact match and mask-based
+    // matching
+    const PostCodeHandler* handler = findWithMask(code);
     if (!handler)
     {
         return;
@@ -141,6 +201,9 @@ void PostCodeHandlers::handle(postcode_t code)
     {
         (*(handler->event)).raise();
     }
+
+    // Log NVIDIA POST code with resolution if available
+    logNvidiaPostCode(std::get<0>(code), handler->resolution);
 }
 
 void PostCodeHandlers::load(const std::string& path)

@@ -79,6 +79,9 @@ struct PostCodeHandler
     std::optional<secondarycode_t> secondary;
     std::vector<std::string> targets;
     std::optional<PostCodeEvent> event;
+    // NVIDIA Code
+    std::optional<primarycode_t> mask;
+    std::optional<std::string> resolution;
 };
 
 struct PostCodeHandlers
@@ -87,6 +90,9 @@ struct PostCodeHandlers
     void handle(postcode_t code);
     const PostCodeHandler* find(postcode_t code);
     void load(const std::string& path);
+    // NVIDIA Code
+    const PostCodeHandler* findWithMask(postcode_t code);
+    const std::optional<std::string>& getResolution(postcode_t code);
 };
 
 struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
