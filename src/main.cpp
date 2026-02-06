@@ -69,7 +69,10 @@ int main(int argc, char* argv[])
 
     bus.request_name(intfName.c_str());
 
-    PostCode postCode{bus, dbusObjName.c_str(), eventP, node, handlers};
+    const std::string postCodeListPathPrefix =
+        "/var/lib/logging/phosphor-post-code-manager/host";
+    PostCode postCode{bus,      dbusObjName.c_str(),   eventP, node,
+                      handlers, postCodeListPathPrefix};
 
     try
     {

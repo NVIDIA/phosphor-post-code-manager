@@ -92,3 +92,38 @@ executable(
     ],
     include_directories: 'inc',
 )
+
+build_tests = get_option('tests')
+
+if build_tests.allowed()
+    subdir('test')
+endif
+
+if get_option('b_coverage')
+    gcovr = find_program('gcovr', required: false)
+    if gcovr.found()
+        gcovr_config_path = join_paths(meson.project_source_root(), 'gcovr.cfg')
+        coverage_html_dir = meson.current_build_dir() / 'coverage-html'
+        coverage_html_out = coverage_html_dir / 'index.html'
+        mkdir = find_program('mkdir')
+        sh = find_program('sh')
+        coverage_html = custom_target(
+            'coverage-html-gcovr',
+            output: 'coverage-html-gcovr',
+            command: [
+                sh,
+                '-c',
+                '@0@ -p @1@ && @2@ --config @3@ --root @4@ --html --html-details -o @5@ --print-summary'.format(
+                    mkdir.path(),
+                    coverage_html_dir,
+                    gcovr.path(),
+                    gcovr_config_path,
+                    meson.project_source_root(),
+                    coverage_html_out,
+                ),
+            ],
+            depends: [],
+            build_by_default: false,
+        )
+    endif
+endif

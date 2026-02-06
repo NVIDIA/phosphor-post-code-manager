@@ -30,6 +30,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 const static constexpr char* CurrentBootCycleCountName =
     "CurrentBootCycleCount";
@@ -38,8 +39,6 @@ const static constexpr char* CurrentBootCycleIndexName =
 
 const static constexpr char* PostCodePath =
     "/xyz/openbmc_project/state/boot/raw";
-const static constexpr char* PostCodeListPathPrefix =
-    "/var/lib/logging/phosphor-post-code-manager/host";
 const static constexpr char* HostStatePathPrefix =
     "/xyz/openbmc_project/state/host";
 const static constexpr char* PostCodeDataVersionName = "PostCodeDataVersion";
@@ -98,10 +97,12 @@ struct PostCodeHandlers
 struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
 {
     PostCode(sdbusplus::bus_t& bus, const char* path, EventPtr& event,
-             int nodeIndex, PostCodeHandlers& handlers) :
+             int nodeIndex, PostCodeHandlers& handlers,
+             const std::string& postCodeListPathPrefix =
+                 "/var/lib/logging/phosphor-post-code-manager/host") :
         sdbusplus::server::object_t<post_code, delete_all>(bus, path), bus(bus),
         event(event), node(nodeIndex),
-        postCodeListPath(PostCodeListPathPrefix + std::to_string(node)),
+        postCodeListPath(postCodeListPathPrefix + std::to_string(node)),
         propertiesChangedSignalRaw(
             bus,
             sdbusplus::bus::match::rules::propertiesChanged(
@@ -185,6 +186,9 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
         uint16_t index) override;
     void deleteAll() override;
 
+  protected:
+    void savePostCodes(postcode_t code);
+
   private:
     void incrBootCycle();
     uint16_t getBootNum(const uint16_t index) const;
@@ -200,8 +204,6 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     uint16_t currentBootCycleIndex = 0;
     sdbusplus::bus::match_t propertiesChangedSignalRaw;
     sdbusplus::bus::match_t propertiesChangedSignalCurrentHostState;
-
-    void savePostCodes(postcode_t code);
     fs::path serialize(const fs::path& path);
     bool deserialize(const fs::path& path, uint16_t& index);
     bool deserializePostCodes(const fs::path& path,

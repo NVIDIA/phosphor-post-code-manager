@@ -25,3 +25,4 @@ option(
     type: 'string',
     description: 'The sys path for postcode display on debug card',
 )
+option('tests', type: 'feature', description: 'Build tests', value: 'enabled')

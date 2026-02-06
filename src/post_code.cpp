@@ -24,6 +24,7 @@
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/vector.hpp>
 #include <phosphor-logging/commit.hpp>
+#include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/exception.hpp>
 
