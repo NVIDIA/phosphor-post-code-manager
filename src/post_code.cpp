@@ -27,6 +27,7 @@
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/exception.hpp>
 
+#include <format>
 #include <iomanip>
 
 using nlohmann::json;
@@ -186,6 +187,13 @@ void PostCodeHandlers::handle(postcode_t code)
     const PostCodeHandler* handler = findWithMask(code);
     if (!handler)
     {
+        std::string hexCode = "0x";
+        for (const auto& byte : std::get<0>(code))
+        {
+            hexCode += std::format("{:02X}", byte);
+        }
+        std::cerr << "No handler found for code: " << hexCode << std::endl;
+        logNvidiaPostCode(std::get<0>(code), std::nullopt);
         return;
     }
     for (const auto& target : handler->targets)
