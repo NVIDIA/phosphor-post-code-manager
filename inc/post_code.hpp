@@ -87,7 +87,7 @@ struct PostCodeHandler
 struct PostCodeHandlers
 {
     std::vector<PostCodeHandler> handlers;
-    void handle(postcode_t code);
+    void handle(sdbusplus::bus_t& bus, postcode_t code);
     const PostCodeHandler* find(postcode_t code);
     void load(const std::string& path);
     // NVIDIA Code

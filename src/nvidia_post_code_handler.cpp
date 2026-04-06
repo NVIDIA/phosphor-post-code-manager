@@ -168,7 +168,7 @@ int getPackageNumber(uint8_t classField)
 }
 
 // NVIDIA-specific logging function (public API)
-void logNvidiaPostCode(const std::vector<uint8_t>& code,
+void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
                        const std::optional<std::string>& resolution)
 {
     // Only process 4-byte NVIDIA TB500 post codes
@@ -216,7 +216,6 @@ void logNvidiaPostCode(const std::vector<uint8_t>& code,
 
     try
     {
-        auto bus = sdbusplus::bus::new_default();
         auto method = bus.new_method_call(loggingService, loggingObject,
                                           loggingInterface, "Create");
         method.append(logMsg);
