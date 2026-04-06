@@ -152,68 +152,68 @@ TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeErrorType)
 {
     std::vector<uint8_t> code = {0x80, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution = "Test resolution";
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeProgressType)
 {
     std::vector<uint8_t> code = {0x40, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution;
-    logNvidiaPostCode(code, resolution);
+    logNvidiaPostCode(bus, code, resolution);
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeDebugType)
 {
     std::vector<uint8_t> code = {0xC0, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution;
-    logNvidiaPostCode(code, resolution);
+    logNvidiaPostCode(bus, code, resolution);
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeWrongSize)
 {
     std::vector<uint8_t> code = {0x01, 0x02, 0x03};
     std::optional<std::string> resolution;
-    logNvidiaPostCode(code, resolution);
+    logNvidiaPostCode(bus, code, resolution);
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeEmptyResolution)
 {
     std::vector<uint8_t> code = {0x80, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution = "";
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeNoResolution)
 {
     std::vector<uint8_t> code = {0x80, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution = std::nullopt;
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeException)
 {
     std::vector<uint8_t> code = {0x80, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution = "Test";
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeFullError)
 {
     std::vector<uint8_t> code = {0x82, 0x0F, 0xC1, 0xFF};
     std::optional<std::string> resolution = "Full resolution";
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeWithResolutionNonEmpty)
 {
     std::vector<uint8_t> code = {0x80, 0x08, 0xC0, 0x01};
     std::optional<std::string> resolution = "Check firmware version";
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeCatchBlockSwallowsException)
 {
     std::vector<uint8_t> code = {0x80, 0x30, 0xC0, 0x00};
     std::optional<std::string> resolution = std::nullopt;
-    EXPECT_NO_THROW(logNvidiaPostCode(code, resolution));
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }

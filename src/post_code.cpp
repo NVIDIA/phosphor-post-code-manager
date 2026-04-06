@@ -181,19 +181,18 @@ const PostCodeHandler* PostCodeHandlers::find(postcode_t code)
     return nullptr;
 }
 
-void PostCodeHandlers::handle(postcode_t code)
+void PostCodeHandlers::handle(sdbusplus::bus_t& bus, postcode_t code)
 {
     // NVIDIA: Use findWithMask() to support both exact match and mask-based
     // matching
     const PostCodeHandler* handler = findWithMask(code);
     if (!handler)
     {
-        logNvidiaPostCode(std::get<0>(code), std::nullopt);
+        logNvidiaPostCode(bus, std::get<0>(code), std::nullopt);
         return;
     }
     for (const auto& target : handler->targets)
     {
-        auto bus = sdbusplus::bus::new_default();
         auto method = bus.new_method_call(SYSTEMD_SERVICE, SYSTEMD_ROOT,
                                           SYSTEMD_INTERFACE, "StartUnit");
         method.append(target);
@@ -206,7 +205,7 @@ void PostCodeHandlers::handle(postcode_t code)
     }
 
     // Log NVIDIA POST code with resolution if available
-    logNvidiaPostCode(std::get<0>(code), handler->resolution);
+    logNvidiaPostCode(bus, std::get<0>(code), handler->resolution);
 }
 
 void PostCodeHandlers::load(const std::string& path)
@@ -342,7 +341,7 @@ void PostCode::savePostCodes(postcode_t code)
             "REDFISH_MESSAGE_ARGS=%d,%s,%s", currentBootCycleIndex,
             timeOffsetStr.str().c_str(), hexCode.str().c_str()));
 #endif
-    postCodeHandlers.handle(code);
+    postCodeHandlers.handle(bus, code);
 
     return;
 }

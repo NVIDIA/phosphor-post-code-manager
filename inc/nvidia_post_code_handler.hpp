@@ -15,12 +15,15 @@
 */
 #pragma once
 
+#include <sdbusplus/bus.hpp>
+
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
 // NVIDIA TB500 POST code logging function
-// Decodes and logs error codes with socket, instance, and firmware information
-void logNvidiaPostCode(const std::vector<uint8_t>& code,
+// Decodes and logs error codes with socket, instance, and firmware information.
+// Uses the caller's bus (e.g. PostCode service connection); no static bus.
+void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
                        const std::optional<std::string>& resolution);

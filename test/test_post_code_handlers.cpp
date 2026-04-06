@@ -209,7 +209,7 @@ TEST_F(PostCodeHandlersTest, HandleWithTargets)
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
-    EXPECT_ANY_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, HandleWithEvent)
@@ -227,7 +227,7 @@ TEST_F(PostCodeHandlersTest, HandleWithEvent)
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
-    EXPECT_NO_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, HandleNoMatch)
@@ -243,7 +243,7 @@ TEST_F(PostCodeHandlersTest, HandleNoMatch)
     postcode_t code = std::make_tuple(primary, secondary);
 
     // Should not throw or crash
-    EXPECT_NO_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, LoadFromJson)
@@ -303,7 +303,7 @@ TEST_F(PostCodeHandlersTest, HandleWithResolution)
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
-    EXPECT_NO_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, HandleWithTargetsAndEvent)
@@ -322,7 +322,7 @@ TEST_F(PostCodeHandlersTest, HandleWithTargetsAndEvent)
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
-    EXPECT_ANY_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, FindWithMaskEmptyHandlers)
@@ -448,7 +448,7 @@ TEST_F(PostCodeHandlersTest, HandlerWithAllOptionalsSet)
     EXPECT_TRUE(found->event.has_value());
     EXPECT_TRUE(found->resolution.has_value());
 
-    EXPECT_NO_THROW(handlers.handle(code));
+    EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
 TEST_F(PostCodeHandlersTest, FindWithMaskMaskMatchFirstHandlerSkipSecond)
