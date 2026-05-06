@@ -20,6 +20,7 @@
 
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/elog-errors.hpp>
+#include <sdbusplus/exception.hpp>
 #include <sdbusplus/timer.hpp>
 #include <xyz/openbmc_project/Collection/DeleteAll/server.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
@@ -133,9 +134,23 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
                 auto valPropMap = msgData.find("CurrentHostState");
                 if (valPropMap != msgData.end())
                 {
-                    StateServer::Host::HostState currentHostState =
-                        StateServer::Host::convertHostStateFromString(
-                            std::get<std::string>(valPropMap->second));
+                    const std::string& hostStateStr =
+                        std::get<std::string>(valPropMap->second);
+                    StateServer::Host::HostState currentHostState;
+                    try
+                    {
+                        currentHostState =
+                            StateServer::Host::convertHostStateFromString(
+                                hostStateStr);
+                    }
+                    catch (const sdbusplus::exception::InvalidEnumString& e)
+                    {
+                        phosphor::logging::log<
+                            phosphor::logging::level::WARNING>(
+                            "Ignoring CurrentHostState change: invalid or empty value",
+                            phosphor::logging::entry("WHAT=%s", e.what()));
+                        return;
+                    }
                     if (currentHostState == StateServer::Host::HostState::Off)
                     {
                         if (this->postCodes.empty())
