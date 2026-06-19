@@ -98,7 +98,7 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
         postCodeListPath(PostCodeListPathPrefix + std::to_string(node)),
         propertiesChangedSignalRaw(
             bus,
-            sdbusplus::bus::match::rules::propertiesChanged(
+            sdbusplus::match_rules::propertiesChanged(
                 PostCodePath + std::to_string(node),
                 "xyz.openbmc_project.State.Boot.Raw"),
             [this](sdbusplus::message_t& msg) {
@@ -115,7 +115,7 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
             }),
         propertiesChangedSignalCurrentHostState(
             bus,
-            sdbusplus::bus::match::rules::propertiesChanged(
+            sdbusplus::match_rules::propertiesChanged(
                 HostStatePathPrefix + std::to_string(node),
                 "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message_t& msg) {
@@ -191,8 +191,8 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     std::map<uint64_t, postcode_t> postCodes;
     fs::path postCodeListPath;
     uint16_t currentBootCycleIndex = 0;
-    sdbusplus::bus::match_t propertiesChangedSignalRaw;
-    sdbusplus::bus::match_t propertiesChangedSignalCurrentHostState;
+    sdbusplus::match propertiesChangedSignalRaw;
+    sdbusplus::match propertiesChangedSignalCurrentHostState;
 
     void savePostCodes(postcode_t code);
     fs::path serialize(const fs::path& path);
