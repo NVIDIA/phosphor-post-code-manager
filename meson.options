@@ -26,3 +26,9 @@ option(
     description: 'The sys path for postcode display on debug card',
 )
 option('tests', type: 'feature', description: 'Build tests', value: 'enabled')
+option(
+    'post-code-handlers',
+    type: 'string',
+    value: '',
+    description: 'Handler set name to install (e.g. vera). Empty installs the default empty set.',
+)

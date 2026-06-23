@@ -48,11 +48,9 @@ const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
     {
         bool primaryMatches = false;
 
-        // NVIDIA: Check if mask is defined for flexible matching
         if (handler.mask && handler.mask->size() == handler.primary.size() &&
             handler.mask->size() == primaryCode.size())
         {
-            // NVIDIA: Apply mask: match if (code & mask) == (primary & mask)
             primaryMatches = true;
             for (size_t i = 0; i < primaryCode.size(); ++i)
             {
@@ -65,9 +63,12 @@ const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
                 }
             }
         }
+        else if (handler.mask)
+        {
+            continue;
+        }
         else
         {
-            // No mask: use exact match (standard upstream behavior)
             primaryMatches = (handler.primary == primaryCode);
         }
 
@@ -188,11 +189,22 @@ void PostCodeHandlers::handle(sdbusplus::bus_t& bus, postcode_t code)
     const PostCodeHandler* handler = findWithMask(code);
     if (!handler)
     {
-        logNvidiaPostCode(bus, std::get<0>(code), std::nullopt);
         return;
     }
     for (const auto& target : handler->targets)
     {
+        try
+        {
+            auto check = bus.new_method_call(SYSTEMD_SERVICE, SYSTEMD_ROOT,
+                                             SYSTEMD_INTERFACE, "GetUnit");
+            check.append(target);
+            bus.call(check);
+        }
+        catch (const sdbusplus::exception_t&)
+        {
+            continue;
+        }
+
         auto method = bus.new_method_call(SYSTEMD_SERVICE, SYSTEMD_ROOT,
                                           SYSTEMD_INTERFACE, "StartUnit");
         method.append(target);
@@ -204,8 +216,8 @@ void PostCodeHandlers::handle(sdbusplus::bus_t& bus, postcode_t code)
         (*(handler->event)).raise();
     }
 
-    // Log NVIDIA POST code with resolution if available
-    logNvidiaPostCode(bus, std::get<0>(code), handler->resolution);
+    logNvidiaPostCode(bus, std::get<0>(code), handler->resolution,
+                      handler->description);
 }
 
 void PostCodeHandlers::load(const std::string& path)

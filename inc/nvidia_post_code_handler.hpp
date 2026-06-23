@@ -25,5 +25,7 @@
 // NVIDIA TB500 POST code logging function
 // Decodes and logs error codes with socket, instance, and firmware information.
 // Uses the caller's bus (e.g. PostCode service connection); no static bus.
-void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
-                       const std::optional<std::string>& resolution);
+void logNvidiaPostCode(
+    sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
+    const std::optional<std::string>& resolution,
+    const std::optional<std::string>& description = std::nullopt);
