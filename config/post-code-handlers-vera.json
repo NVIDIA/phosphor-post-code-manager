@@ -1,0 +1,682 @@
+[
+	{
+		"name": "PSC_ROM_EC_I2C_EXT_MSG_FAIL",
+		"description": "Fail to enable I2C0 for Ext Messaging interface",
+		"primary": "0xB0C0C001",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to initialize the I2C0 external messaging interface. Reboot the system. If the same error code persists, this indicates a hardware problem. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "PSC_ROM_EC_BOOT_MODE_SEL_FAIL",
+		"description": "Fail to Detect Boot Mode and Boot Device",
+		"primary": "0xB0C0C002",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to detect the boot mode and boot device. This is typically caused by an incorrect strap configuration. Check the strap values in the BMC/HMC and compare them to the documented values for the platform. Contact NVIDIA if the strap values appear correct."
+	},
+	{
+		"name": "PSC_ROM_EC_USB_EXT_MSG_FAIL",
+		"description": "Fail to Enable USB composite device",
+		"primary": "0xB0C0C003",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to enable the USB composite device. Reboot the system. If the same error code persists, this indicates a hardware problem. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "PSC_ROM_EC_EROT_GRANT_FAIL",
+		"description": "Timeout to get FW QSPI access from eROT",
+		"primary": "0xB0C0C004",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM timed out waiting for the eROT to grant access to the firmware QSPI flash. Check the eROT BOOT_COMPLETE status and Redfish messages for eROT failures. Reboot the system. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_QSPI0_DEV_FAIL",
+		"description": "Fail to Initialize QSPI as Boot Device",
+		"primary": "0xB0C0C005",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to initialize the QSPI0 flash device. If eROT is present, verify that QSPI read operations are functioning. Reboot the system. If the issue persists with eROT present, contact the eROT firmware vendor. If no eROT is present, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_USB2_DEV_FAIL",
+		"description": "Fail to Initialize USB2 RCM as Boot Device",
+		"primary": "0xB0C0C006",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to initialize the USB2 device for recovery. Try the following steps: 1) Reboot the system. 2) Verify the USB cable is connected to the host. 3) Reconnect the USB cable. 4) Try connecting to a different port on the host. If all of the above fail, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_OCPRC_DEV_FAIL",
+		"description": "Fail to Initialize OCP Recovery as Boot Device",
+		"primary": "0xB0C0C007",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to initialize OCP Recovery as a boot device. Power off and power on the system. If the same error persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_BOOT_CHAIN_EXHAUST",
+		"description": "All boot chains exhausted",
+		"primary": "0xB0C0C008",
+		"mask": "0xFEFF003F",
+		"resolution": "The device failed to boot after attempting both boot chains. Power off and power on the system. If the same issue persists, reflash the firmware images."
+	},
+	{
+		"name": "PSC_ROM_EC_S2A_HEADER_CHECK_FAIL",
+		"description": "Invalid S2A blob header",
+		"primary": "0xB0C0C00B",
+		"mask": "0xFEFF003F",
+		"resolution": "The S2A DOT blob header is corrupted. The S2A DOT blob is provided by the OEM. The device will automatically reboot to read from the next slot. If both slots are corrupted, the device will enter recovery mode. Contact the OEM for a valid S2A DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_S2A_SANITY_FAIL",
+		"description": "Sanity checks failed for S2A blob",
+		"primary": "0xB0C0C00C",
+		"mask": "0xFEFF003F",
+		"resolution": "The S2A DOT blob failed sanity checks and appears corrupted. The S2A DOT blob is provided by the OEM. The device will automatically reboot to read from the next slot. If both slots are corrupted, the device will enter recovery mode. Contact the OEM for a valid S2A DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_S2A_INTEGRITY_FAIL",
+		"description": "Fail to authenticate S2A blob",
+		"primary": "0xB0C0C00D",
+		"mask": "0xFEFF003F",
+		"resolution": "The S2A DOT blob failed authentication and appears corrupted. The S2A DOT blob is provided by the OEM. The device will automatically reboot to read from the next slot. If both slots are corrupted, the device will enter recovery mode. Contact the OEM for a valid S2A DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_S2A_KEY_REVOKED",
+		"description": "Keys from S2A blob are revoked",
+		"primary": "0xB0C0C00E",
+		"mask": "0xFEFF003F",
+		"resolution": "The signing keys in the S2A DOT blob have been revoked. The device will automatically reboot to read from the next slot. If the next slot also has the same error, the device will enter recovery mode. Contact the OEM to obtain a new S2A DOT blob with a valid key index."
+	},
+	{
+		"name": "PSC_ROM_EC_DOT_SLOT_EXHAUST",
+		"description": "Fail to find valid S2A/DOT blob",
+		"primary": "0xB0C0C00A",
+		"mask": "0xFEFF003F",
+		"resolution": "No valid DOT slot is available. The device will not boot and will enter recovery mode. Repair the DOT to resume booting. Check the DOT error codes from previous boots to understand the issue with the DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_MUTABLE_DOT_HEADER_CHECK_FAIL",
+		"description": "Invalid Mutable DOT blob header",
+		"primary": "0xB0C0C00F",
+		"mask": "0xFEFF003F",
+		"resolution": "The Mutable DOT blob header is corrupted. The device will automatically reboot to read from the next slot. If the next slot also has the same error, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_ROM_EC_MUTABLE_DOT_INTEGRITY_FAIL",
+		"description": "Fail to authenticate Mutable DOT blob",
+		"primary": "0xB0C0C010",
+		"mask": "0xFEFF003F",
+		"resolution": "The Mutable DOT blob failed authentication and appears corrupted. The device will automatically reboot to read from the next slot. If the next slot also has the same error, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_ROM_EC_MUTABLE_DOT_SANITY_FAIL",
+		"description": "Sanity checks failed for Mutable DOT blob",
+		"primary": "0xB0C0C011",
+		"mask": "0xFEFF003F",
+		"resolution": "The Mutable DOT blob failed sanity checks and appears corrupted. The device will automatically reboot to read from the next slot. If the next slot also has the same error, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_ROM_EC_VOLATILE_DOT_PARITY_FAIL",
+		"description": "Ownership ram parity check failed for Volatile DOT blob",
+		"primary": "0xB0C0C012",
+		"mask": "0xFEFF003F",
+		"resolution": "The Volatile DOT blob in ownership RAM has a parity error. The Volatile DOT blob contains the CAK. The device will reboot. To recover, send a correct Volatile DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_VOLATILE_DOT_HEADER_CHECK_FAIL",
+		"description": "Invalid Volatile DOT blob header",
+		"primary": "0xB0C0C013",
+		"mask": "0xFEFF003F",
+		"resolution": "The Volatile DOT blob header in ownership RAM is corrupted. The Volatile DOT blob contains the CAK. The device will reboot. To recover, send a correct Volatile DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_VOLATILE_DOT_SANITY_FAIL",
+		"description": "Sanity checks failed for volatile DOT blob",
+		"primary": "0xB0C0C014",
+		"mask": "0xFEFF003F",
+		"resolution": "The Volatile DOT blob in ownership RAM failed sanity checks. The Volatile DOT blob contains the CAK. The device will reboot. To recover, send a correct Volatile DOT blob."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_CSH_SANITY_FAIL",
+		"description": "Sanity checks failed for PSC-FMC CSH",
+		"primary": "0xB0C0C016",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC image is corrupted. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_CSH_AUTHZ1_FAIL",
+		"description": "Failed to validate stage 1 authenticity of PSC-FMC",
+		"primary": "0xB0C0C017",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC image failed stage 1 authentication. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_CSH_AUTHZ2_FAIL",
+		"description": "Failed to validate stage 2 authenticity of PSC-FMC",
+		"primary": "0xB0C0C018",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC image failed stage 2 authentication. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_CSH_BIN_LIST_INTEGRITY_FAIL",
+		"description": "CSH binary metadata list is corrupted",
+		"primary": "0xB0C0C019",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC image binary metadata list is corrupted. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_SANITY_FAIL",
+		"description": "Sanity checks for PSC-FMC are failed",
+		"primary": "0xB0C0C01A",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC image failed sanity checks and is corrupted. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_INTEGRITY_FAIL",
+		"description": "PSC-FMC binary is corrupted",
+		"primary": "0xB0C0C01B",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC binary image is corrupted. The device will reboot and attempt to boot from the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images to recover."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_DECRYPTION_FAIL",
+		"description": "Failed to decrypt PSC-FMC",
+		"primary": "0xB0C0C01C",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to decrypt the PSC-FMC image. This may indicate an issue with the security engine. Power off and power on the system. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_OEM_RATCHET_FAIL",
+		"description": "Fuse rollback check failed for PSC-FMC",
+		"primary": "0xB0C0C01D",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC image rollback protection was triggered when using S2A DOT. The image version is older than the minimum allowed by the fuse settings. Contact the OEM for an updated firmware image."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_MUT_DOT_SVN_FUSE_RATCHET_FAIL",
+		"description": "Fuse rollback check failed for Mutable DOT",
+		"primary": "0xB0C0C01E",
+		"mask": "0xFEFF003F",
+		"resolution": "The Mutable DOT blob SVN is lower than the value burned into fuses. This is a rollback protection mechanism. Update the DOT blob with the correct SVN."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_MUT_DOT_SVN_CSH_RATCHET_FAIL",
+		"description": "Mutable DOT rollback check failed for PSC-FMC",
+		"primary": "0xB0C0C01F",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC image rollback protection was triggered when using Mutable DOT. The image version is older than the minimum allowed by the DOT. Flash an updated DOT or PSC-FMC image."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_SVN_FUSE_RATCHET_FAIL",
+		"description": "Fuse rollback check failed for Volatile DOT",
+		"primary": "0xB0C0C020",
+		"mask": "0xFEFF003F",
+		"resolution": "The Volatile DOT blob SVN is lower than the value burned into fuses. This is a rollback protection mechanism. Update the DOT blob with the correct SVN."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_SVN_CSH_RATCHET_FAIL",
+		"description": "Volatile DOT rollback check failed for PSC-FMC",
+		"primary": "0xB0C0C021",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC image rollback protection was triggered when using Volatile DOT. The image version is older than the minimum allowed by the DOT. Flash an updated DOT or PSC-FMC image."
+	},
+	{
+		"name": "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_CSH_RATCHET_FAIL",
+		"description": "Volatile DOT rollback check failed for PSC-FMC When CAK is zero",
+		"primary": "0xB0C0C022",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC image rollback protection was triggered when using Volatile DOT. The image version is older than the minimum allowed by the DOT. Flash an updated DOT or PSC-FMC image."
+	},
+	{
+		"name": "PSC_FMC_EC_FUSE_CRC_FAILED",
+		"description": "Fail to validate system dielete fuse CRC",
+		"primary": "0xB0C1C001",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC failed to validate the system dielet fuse CRC. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_NVDLINK_LS_LINK_FAILED",
+		"description": "NVDLink low speed link up failed",
+		"primary": "0xB0C1C002",
+		"mask": "0xFEFF003F",
+		"resolution": "The NVDLink low-speed link failed to come up. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_BOOT_CHAIN_LEDGER_INVALID",
+		"description": "Sanity checks failed for Boot Chain Ledger copy",
+		"primary": "0xB0C1C003",
+		"mask": "0xFEFF003F",
+		"resolution": "A Boot Chain Ledger copy is corrupted or invalid. If this code is received for both copies, the device will report both chains as not bootable. Otherwise, boot will continue with the valid copy. If both copies fail, reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_FMC_EC_BOOT_CHAIN_LEDGER_NOT_BOOTABLE",
+		"description": "Both chains are not bootable",
+		"primary": "0xB0C1C004",
+		"mask": "0xFEFF003F",
+		"resolution": "Both Boot Chain Ledger copies are corrupted or invalid, or both boot chains are not bootable. The device will enter recovery mode. Reflash the firmware with valid images to recover the system."
+	},
+	{
+		"name": "PSC_FMC_EC_BOOT_CHAIN_LEDGER_MISMATCH",
+		"description": "Boot chain selection mismatch between PSC-ROM and PSC-FMC",
+		"primary": "0xB0C1C005",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC and PSC-ROM are not in agreement on the boot chain selection. The device will reset with appropriate values so that ROM boots using the correct chain. After reset, the system will either boot successfully or enter recovery. Check for additional error codes from PSC-ROM or PSC-FMC after the reset."
+	},
+	{
+		"name": "PSC_FMC_EC_SANITY_FAILED",
+		"description": "Sanity checks for L1PT failed",
+		"primary": "0xB0C1C008",
+		"mask": "0xFEFF003F",
+		"resolution": "The L1 Partition Table failed sanity checks. The device will reset and boot into the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_FMC_EC_DEBUG_TOKEN_SANITY_FAIL",
+		"description": "Sanity checks for Debug Token failed",
+		"primary": "0xB0C1C006",
+		"mask": "0xFEFF003F",
+		"resolution": "The debug token failed sanity checks. The device will continue to boot, but debug token functionality will not be enabled. Reflash the debug token if debug functionality is required."
+	},
+	{
+		"name": "PSC_FMC_EC_DEBUG_TOKEN_AUTHENTICATION_FAIL",
+		"description": "Failed to authenticate Debug Token",
+		"primary": "0xB0C1C007",
+		"mask": "0xFEFF003F",
+		"resolution": "The debug token failed authentication. The device will continue to boot, but debug token functionality will not be enabled. Reflash the debug token if debug functionality is required."
+	},
+	{
+		"name": "PSC_FMC_EC_STAGE2_AUTHENTICATION_FAILED",
+		"description": "Failed to authenticate stage-2 header of PSC-FMC BCT",
+		"primary": "0xB0C1C00A",
+		"mask": "0xFEFF003F",
+		"resolution": "Stage 2 authentication failed for the first copy of the L1 partition table. In practice this base/instance-0 variant is not expected to fire because L1PT instance 0 has no stage-2 signature; the stage-2 failure is reported against the specific binary that failed using the per-binary instance variants. For the base case, the device will reset and boot into the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_FMC_EC_HALT_DISABLED_SOCKET",
+		"description": "Aborting boot on package 1 as it is disabled",
+		"primary": "0xB0C1C00C",
+		"mask": "0xFEFF003F",
+		"resolution": "This error occurs only on socket 1 when it is disabled. The device will not boot further on this socket. To enable socket 1, set PSC-BCT max_socket_count to 2 and flash the updated PLDM package."
+	},
+	{
+		"name": "MB1_EC_NVDLINK_HS_TRAIN_FAILED",
+		"description": "NVDLink high speed training failed",
+		"primary": "0xB0C3C002",
+		"mask": "0xFEFF003F",
+		"resolution": "NVDLink high-speed link training failed. This could be caused by a firmware issue or a hardware problem. Try falling back to a previously known-working firmware image. If the old image also fails, this indicates a hardware issue. Power off and power on the system. Contact NVIDIA if the issue persists."
+	},
+	{
+		"name": "C2C_LPI_S0_EC_TRAINING_FAILED",
+		"description": "C2C LPI High speed training failed",
+		"primary": "0xB0DCC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_LPI_S1_EC_TRAINING_FAILED",
+		"description": "C2C LPI High speed training failed",
+		"primary": "0xB0DDC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_LPI_C0_EC_TRAINING_FAILED",
+		"description": "C2C LPI High speed training failed",
+		"primary": "0xB0DEC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_LPI_C1_EC_TRAINING_FAILED",
+		"description": "C2C LPI High speed training failed",
+		"primary": "0xB0DFC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "MB1_EC_NVDLINK_LLI_INIT_FAILED",
+		"description": "NVDLink LLI hardware initialization failed",
+		"primary": "0xB0C3C003",
+		"mask": "0xFEFF003F",
+		"resolution": "The NVDLink LLI hardware initialization failed. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_SVN_CHECK_FAILED",
+		"description": "Security Version Number check failed for PSC-FMC BCT",
+		"primary": "0xB0C1C00B",
+		"mask": "0xFEFF003F",
+		"resolution": "The PSC-FMC BCT image has an SVN lower than the SVN in the DOT. This is a rollback protection mechanism. The device will reset and boot into the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Flash updated images or update the DOT."
+	},
+	{
+		"name": "C2C_GRS0_EC_TRAINING_FAILED",
+		"description": "Training failed on C2C GRS instance 0",
+		"primary": "0xB0D4C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_GRS1_EC_TRAINING_FAILED",
+		"description": "Training failed on C2C GRS instance 1",
+		"primary": "0xB0D5C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY0_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 0",
+		"primary": "0xB0D6C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY1_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 1",
+		"primary": "0xB0D7C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY2_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 2",
+		"primary": "0xB0D8C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY3_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 3",
+		"primary": "0xB0D9C001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY4_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 4",
+		"primary": "0xB0DAC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "C2C_UPHY5_EC_TRAINING_FAILED",
+		"description": "C2C Training failed on UPHY instance 5",
+		"primary": "0xB0DBC001",
+		"mask": "0xFEFF003F",
+		"resolution": "A hardware error was detected. Reboot the system. If the error persists, contact NVIDIA support."
+	},
+	{
+		"name": "MB1_EC_SPD_READ_FAILED",
+		"description": "Failed to read SPD-hub EEPROM",
+		"primary": "0xB0C3C006",
+		"mask": "0xFEFF003F",
+		"resolution": "MB1 failed to read the memory SPD hub EEPROM. This may indicate a memory module seating issue or a faulty memory module. Verify that all memory modules are properly seated. If the issue persists, try reseating or replacing the affected memory module. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_MEMORY_HETEROGENOUS",
+		"description": "Memories are of different types",
+		"primary": "0xB0C3C007",
+		"mask": "0xFEFF003F",
+		"resolution": "The installed memory modules are not uniform. Ensure all modules are identical in terms of manufacturer, model, capacity, and speed. Refer to the system documentation or existing module labels for confirmation. If mismatched modules are found, replace them with compatible sets. If multiple faults exist, there may be multiple subsequent occurrences even after resolving one instance of the failure."
+	},
+	{
+		"name": "MB1_EC_MEMORY_UNSUPPORTED",
+		"description": "Memory lookup in MB1-BCT table failed",
+		"primary": "0xB0C3C008",
+		"mask": "0xFEFF003F",
+		"resolution": "This error code indicates missing or corrupt SPD data, which is critical for memory initialization. Due to the lack of essential information, consult the system manufacturer's support resources or contact their technical support team for further troubleshooting guidance and potential firmware updates."
+	},
+	{
+		"name": "MB1_EC_DRAM_POPULATION_UNSUPPORTED",
+		"description": "Unsupported DRAM population",
+		"primary": "0xB0C3C009",
+		"mask": "0xFEFF003F",
+		"resolution": "An invalid population of memory is attached to the processor. Ensure DIMMs are populated in the correct combination as specified in the system documentation. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "MB1_EC_CHANNEL_LOW_COUNT",
+		"description": "Number of enabled channels are not enough to boot",
+		"primary": "0xB0C3C00D",
+		"mask": "0xFEFF003F",
+		"resolution": "The number of available memory channels has fallen below the minimum required to boot. This can occur when too many channels have been retired due to uncorrectable errors or training failures. Verify memory module health and seating. The system may require memory module replacement. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_UNCORRECTED_ERROR_OVERFLOW",
+		"description": "Number of uncorrected error exceeds per GB threshold",
+		"primary": "0xB0C3C00E",
+		"mask": "0xFEFF003F",
+		"resolution": "The system has exceeded the threshold for page retirements due to uncorrectable memory errors. The system should be evaluated for RMA. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_CHANNEL_RETIRED_TRAINING_BOOT",
+		"description": "Channel retired due to multiple failures while training at boot frequency",
+		"primary": "0xB0C3C00F",
+		"mask": "0xFEFF003F",
+		"resolution": "A memory channel has been retired due to repeated training failures at boot frequency. Verify that memory modules are properly seated. If the issue persists, the affected memory module may need to be replaced. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_CHANNEL_RETIRED_UNCORRECTED_ERROR_OVERFLOW",
+		"description": "Channel retired due to number of uncorrected errors exceeds per GB threshold",
+		"primary": "0xB0C3C011",
+		"mask": "0xFEFF003F",
+		"resolution": "A memory channel has been retired because it exceeded the per-channel bad page threshold for uncorrectable errors. The affected memory module may need to be replaced. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_CHANNEL_RETIRED_ALIAS_CHECK",
+		"description": "Channel retired due to multiple aliasing check failures in previous boots",
+		"primary": "0xB0C3C012",
+		"mask": "0xFEFF003F",
+		"resolution": "A memory channel has been retired due to repeated DRAM size aliasing check failures across previous boots. The firmware identified a mismatch between the expected and actual DRAM size. This may require reflashing the SBIOS firmware. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "MB1_EC_CARVEOUT_ALLOC_FAILED",
+		"description": "Failed to allocate memory training related carveouts",
+		"primary": "0xB0C3C005",
+		"mask": "0xFEFF003F",
+		"resolution": "MB1 was unable to allocate memory for carveout regions. Boot will continue. The instance field (bits [12:6]) identifies the specific carveout that failed to allocate. Refer to the carveout instance list in the platform documentation for the mapping of instance values to carveout types. Contact NVIDIA if the issue persists."
+	},
+	{
+		"name": "MB1_EC_DRAM_INIT_FAILED",
+		"description": "Failed to initialize memory at boot frequency",
+		"primary": "0xB0C3C00A",
+		"mask": "0xFEFF003F",
+		"resolution": "Memory channel initialization failed at boot frequency. Verify that all memory modules are properly seated and are of a supported type. Try reseating the memory modules. If the issue persists, try replacing the affected module(s). Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_ALIAS_CHECK_FAILED",
+		"description": "Security check for memory aliasing failed",
+		"primary": "0xB0C3C00B",
+		"mask": "0xFEFF003F",
+		"resolution": "The firmware identified a mismatch between the DRAM size reported in SMBIOS and the memory size that was trained. This may require re-flashing the memory BCT (SBIOS reflash). This could also occur if new DRAM was introduced with an older memory BCT. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_DRAM_REGISTER_CHECK_FAILED",
+		"description": "Cross check of memory registers with MEM BCT failed",
+		"primary": "0xB0C3C00C",
+		"mask": "0xFEFF003F",
+		"resolution": "A cross-check of memory registers against the Memory BCT failed. This may indicate a memory configuration issue. Verify that the correct firmware is installed for the memory modules in use. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_SEGMENT_CTRL_TLV_SANITY_FAILED",
+		"description": "Sanity check of segment controller TLV failed",
+		"primary": "0xB0C3C013",
+		"mask": "0xFEFF003F",
+		"resolution": "The segment controller TLV data failed a sanity check. Power off and power on the system. If the issue persists, reflash the firmware. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "PSC_ROM_PC_I2C_EXT_MSG_INIT",
+		"description": "PSC ROM I2C external messaging initialization - encodes reset reason in instance field",
+		"primary": "0x70C0C001",
+		"mask": "0xFEFF003F"
+	},
+	{
+		"name": "PSC_ROM_PC_USB_EXT_MSG_INIT",
+		"description": "PSC ROM USB external messaging initialization - encodes reset reason in instance field",
+		"primary": "0x70C0C003",
+		"mask": "0xFEFF003F"
+	},
+	{
+		"name": "PSC_FMC_PC_NVDLINK_LS_LINK_UP",
+		"description": "PSC FMC NVLink low-speed link up - encodes reset reason in instance field",
+		"primary": "0x70C1C003",
+		"mask": "0xFEFF003F"
+	},
+	{
+		"name": "PSC_ROM_EC_BOOT_IMAGE_LOAD_FAIL",
+		"description": "Failed to read S2A/DOT image from boot device",
+		"primary": "0xB0C0C009",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to read the boot image from the boot device (QSPI flash or USB). Power off and power on the system and retry. If the same error persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_ROM_EC_CALIPTRA_ACK_FAIL",
+		"description": "Failed to commit binary hash measurements to Caliptra",
+		"primary": "0xB0C0C015",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC ROM failed to commit firmware binary hash measurements to the Caliptra security subsystem. Power off and power on the system. If the same error persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED",
+		"description": "Failed to authenticate stage-1 header of PSC-FMC BCT",
+		"primary": "0xB0C1C009",
+		"mask": "0xFEFF003F",
+		"resolution": "Stage 1 authentication of the PSC-FMC BCT failed. The device will reset and boot into the alternate chain. If the alternate chain also fails, the device will enter recovery mode. Reflash the firmware with valid images."
+	},
+	{
+		"name": "PSC_FMC_EC_MEM_FUSE_CRC_FAILED",
+		"description": "Memory-die Fuse CRC check failed",
+		"primary": "0xB0C1C00D",
+		"mask": "0xFEFF003F",
+		"resolution": "The memory-die fuses have failed a CRC check, indicating the fuses are damaged. The device will not boot. This is not expected to be seen in production and generally requires module replacement. Contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_CALIPTRA_MAILBOX_FAILED",
+		"description": "Failed to load Caliptra Firmware using mailbox",
+		"primary": "0xB0C1C00E",
+		"mask": "0xFEFF003F",
+		"resolution": "PSC-FMC was unable to commit firmware hashes to the Caliptra security subsystem via mailbox. The device will continue to boot, but Caliptra attestation will not be available. Contact NVIDIA if this issue persists."
+	},
+	{
+		"name": "PSC_FMC_EC_CSA_FAILED",
+		"description": "Cross socket attestation failed (boot chain mismatch)",
+		"primary": "0xB0C1C00F",
+		"mask": "0xFEFF003F",
+		"resolution": "Cross-socket attestation failed because the two sockets are running different boot chains. This is only expected on a multi-socket Strata system. Verify that both sockets are running the same boot chain and that flash contents are consistent across sockets. Reflash with matching images on both sockets. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_DOT_FAILED",
+		"description": "DOT operation failed",
+		"primary": "0xB0C1C010",
+		"mask": "0xFEFF003F",
+		"resolution": "A DOT operation has failed. The failed operation type is indicated in the instance field. The device will reset. Re-attempt the DOT operation. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_EARLY_BOOTVARS_LOAD_FAILED",
+		"description": "Failed to load valid early boot variable",
+		"primary": "0xB0C1C011",
+		"mask": "0xFEFF003F",
+		"resolution": "No valid early boot variable (CMOS) data was found. The system will boot with default settings from BCT records. Any custom settings previously configured through the UEFI menu will need to be reapplied. If this error is seen repeatedly, it may indicate a hardware issue. Contact NVIDIA if the problem persists."
+	},
+	{
+		"name": "PSC_FMC_ED_PRECHANGE_SCB_FAILED",
+		"description": "Socket ID pre-WAR SCB failed",
+		"primary": "0xB0C1C012",
+		"mask": "0xFEFF003F",
+		"resolution": "The socket ID pre-workaround failed because the SCB bit 14 remained high. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_ED_PRECHANGE_SDIE_STRAP_FAILED",
+		"description": "Socket ID pre-WAR S-die strap failed",
+		"primary": "0xB0C1C013",
+		"mask": "0xFEFF003F",
+		"resolution": "The socket ID pre-workaround failed because the S-die strap package ID did not drop to 0 as expected. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_ED_CHANGE_S_C_FAILED",
+		"description": "Socket ID WAR S/C state failed",
+		"primary": "0xB0C1C014",
+		"mask": "0xFEFF003F",
+		"resolution": "The socket ID workaround failed because the C-die is not in the expected state. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_ED_CHANGE_S_C_FAILED_AFTER_APPLY",
+		"description": "Socket ID WAR S/C state failed after apply",
+		"primary": "0xB0C1C015",
+		"mask": "0xFEFF003F",
+		"resolution": "The socket ID workaround was applied, but the C-die is still not in the expected state. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_CSA_FAILED_HASH_MISMATCH",
+		"description": "Cross socket attestation failed (hash mismatch)",
+		"primary": "0xB0C1C04F",
+		"mask": "0xFEFFFFFF",
+		"resolution": "Cross-socket attestation failed a hash comparison between the two sockets. This typically indicates one of: incorrect fusing, mismatched SBIOS firmware between sockets, or different boot chains booting on the two sockets. Verify that both sockets are running the same SBIOS image and boot chain, and capture SOL/UART logs to confirm. If the issue persists after re-flashing matching images, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_STAGE2_AUTHENTICATION_FAILED_CMET_COPY_1",
+		"description": "Failed to authenticate stage-2 header of CMET (first copy)",
+		"primary": "0xB0C1C34A",
+		"mask": "0xFEFFFFFF",
+		"resolution": "Stage-2 authentication failed for the first copy of CMET (Caliptra Manifest Extension Table) - typically because CMET SHA is invalid or CMET has not yet been written. PSC will continue booting; RAS-FW later detects the same condition and rewrites a new CMET to flash, after which subsequent boots no longer report this code. Repeated occurrences after CMET has been written, or boot failures correlated with this code, should be reported to NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_EC_STAGE2_AUTHENTICATION_FAILED_CMET_COPY_2",
+		"description": "Failed to authenticate stage-2 header of CMET (second copy)",
+		"primary": "0xB0C1C38A",
+		"mask": "0xFEFFFFFF",
+		"resolution": "Stage-2 authentication failed for the second copy of CMET (Caliptra Manifest Extension Table) - typically because CMET SHA is invalid or CMET has not yet been written. PSC will continue booting; RAS-FW later detects the same condition and rewrites a new CMET to flash, after which subsequent boots no longer report this code. Repeated occurrences after CMET has been written, or boot failures correlated with this code, should be reported to NVIDIA."
+	},
+	{
+		"name": "MB1_EC_FUSE_RECORD_INTEGRITY_FAILED",
+		"description": "Fuse record integrity check failed",
+		"primary": "0xB0C3C001",
+		"mask": "0xFEFF003F",
+		"resolution": "MB1 detected a fuse record integrity failure. Power off and power on the system. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "MB1_EC_RAS_POLL_FAILED",
+		"description": "RAS poll failed",
+		"primary": "0xB0C3C004",
+		"mask": "0xFEFF003F",
+		"resolution": "MB1 failed to poll the RAS firmware. Power off and power on the device. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "MB1_EC_CHANNEL_RETIRED_TRAINING",
+		"description": "Channel retired due to multiple failures while training at higher frequency",
+		"primary": "0xB0C3C010",
+		"mask": "0xFEFF003F",
+		"resolution": "A memory channel has been retired due to repeated training failures at POR frequency. Verify that memory modules are properly seated. If the issue persists, the affected memory module may need to be replaced. Contact NVIDIA for further assistance."
+	},
+	{
+		"name": "MB1_EC_NVLINK_C2C_TRAIN_FAILED",
+		"description": "NVLink C2C training failed",
+		"primary": "0xB0C3C014",
+		"mask": "0xFEFF003F",
+		"resolution": "NVLink C2C link training failed. This may indicate a seating issue with the module on the baseboard. Try reseating the module. If the issue persists, try reflashing the firmware to verify training values are not problematic. Reboot and contact NVIDIA if the issue persists."
+	},
+	{
+		"name": "MB1_EC_NVCLINK_TRAIN_FAILED",
+		"description": "NVCLink UPHY training failed",
+		"primary": "0xB0C3C015",
+		"mask": "0xFEFF003F",
+		"resolution": "NVCLink UPHY link training failed. Power off and power on the system. If the issue persists, contact NVIDIA."
+	},
+	{
+		"name": "MB1_EC_DRAM_ECC_FAILED",
+		"description": "Failed to initialize ECC memory of DRAM carveouts",
+		"primary": "0xB0C3C016",
+		"mask": "0xFEFF003F",
+		"resolution": "An uncorrectable memory error was seen during ECC initialization at boot. A reset will occur as a result of this error. On the subsequent boot, a CPER message identifying the uncorrectable memory error is expected. The affected memory address will be retired and boot should be able to continue. No troubleshooting is needed for a single occurrence. If this error is seen repeatedly, contact NVIDIA."
+	},
+	{
+		"name": "PSC_FMC_PC_BOOT_MODE_PREBOOT_DIAG",
+		"description": "PSC-FMC entered PreBoot Diagnostic Boot mode",
+		"primary": "0x70C1C142",
+		"mask": "0xFEFFFFFF",
+		"targets": [
+			"com.nvidia.PreBootDiag.PostCodeCallback@PSC_FMC_PC_BOOT_MODE_PREBOOT_DIAG.service"
+		]
+	},
+	{
+		"name": "MB2_PC_CCPLEX_PREBOOT_DIAG_ENTRY",
+		"description": "MB2 entered CCPLEX Preboot Diagnostic mode",
+		"primary": "0x70C5C005",
+		"mask": "0xFEFF003F",
+		"targets": [
+			"com.nvidia.PreBootDiag.PostCodeCallback@MB2_PC_CCPLEX_PREBOOT_DIAG_ENTRY.service"
+		]
+	}
+]

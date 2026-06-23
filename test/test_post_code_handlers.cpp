@@ -157,7 +157,7 @@ TEST_F(PostCodeHandlersTest, FindWithMaskSizeMismatch)
     postcode_t code = std::make_tuple(primary, secondary);
 
     const PostCodeHandler* result = handlers.findWithMask(code);
-    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(result, nullptr);
 }
 
 TEST_F(PostCodeHandlersTest, FindWithMaskSecondaryMatch)
@@ -474,7 +474,7 @@ TEST_F(PostCodeHandlersTest, FindWithMaskMaskMatchFirstHandlerSkipSecond)
     EXPECT_EQ(result->primary, handler1.primary);
 }
 
-TEST_F(PostCodeHandlersTest, FindWithMaskMaskSizeMismatchUsesExactMatch)
+TEST_F(PostCodeHandlersTest, FindWithMaskMaskSizeMismatchSkipsHandler)
 {
     PostCodeHandlers handlers;
 
@@ -488,8 +488,7 @@ TEST_F(PostCodeHandlersTest, FindWithMaskMaskSizeMismatchUsesExactMatch)
     postcode_t code = std::make_tuple(primary, secondary);
 
     const PostCodeHandler* result = handlers.findWithMask(code);
-    EXPECT_NE(result, nullptr);
-    EXPECT_EQ(result->primary, handler.primary);
+    EXPECT_EQ(result, nullptr);
 }
 
 TEST_F(PostCodeHandlersTest, FindWithMaskMaskSizeMismatchNoMatch)
