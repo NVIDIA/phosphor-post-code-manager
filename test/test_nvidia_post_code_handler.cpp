@@ -19,6 +19,7 @@
 #include <sdbusplus/test/sdbus_mock.hpp>
 
 #include <array>
+#include <cerrno>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -28,7 +29,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using ::testing::_;
 using ::testing::NiceMock;
+using ::testing::Return;
+using ::testing::Throw;
 
 uint32_t postcodeToUint32(const std::vector<uint8_t>& code);
 uint8_t extractStatusType(uint32_t postcode);
@@ -537,7 +541,6 @@ TEST_F(NvidiaPostCodeHandlerTest, PiErrorManageabilityOperationAbove1000)
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
-
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeOperationLowerBoundMiss)
 {
     std::vector<uint8_t> code = {0xB0, 0xC0, 0x00, 0x00};
@@ -551,7 +554,6 @@ TEST_F(NvidiaPostCodeHandlerTest, PiErrorComputingUnitKnownOperation)
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
-
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeOperationEndMiss)
 {
     std::vector<uint8_t> code = {0xB0, 0xDF, 0x00, 0x3F};
@@ -565,7 +567,6 @@ TEST_F(NvidiaPostCodeHandlerTest, PiErrorComputingUnitUnknownOperationBelow1000)
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
-
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeInstanceEndMiss)
 {
     std::vector<uint8_t> code = {0xB0, 0xC9, 0x00, 0x16};
@@ -579,7 +580,6 @@ TEST_F(NvidiaPostCodeHandlerTest, PiErrorUnknownSubclass)
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
-
 TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeNonStdExceptionPropagates)
 {
     std::vector<uint8_t> code = {0x80, 0x00, 0x00, 0x00};
@@ -609,6 +609,7 @@ TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeSubclassAboveSipMax)
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
 }
+
 TEST_F(NvidiaPostCodeHandlerTest, PiErrorPeripheralKnownOperation)
 {
     std::vector<uint8_t> code = {0x81, 0x07, 0x00, 0x02};
