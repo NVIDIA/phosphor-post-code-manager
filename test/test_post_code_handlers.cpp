@@ -18,14 +18,20 @@
 
 #include <sdbusplus/test/sdbus_mock.hpp>
 
+#include <cerrno>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using ::testing::_;
 using ::testing::NiceMock;
+using ::testing::Return;
+using ::testing::Throw;
 
 class PostCodeHandlersTest : public ::testing::Test
 {
@@ -210,6 +216,83 @@ TEST_F(PostCodeHandlersTest, HandleWithTargets)
     postcode_t code = std::make_tuple(primary, secondary);
 
     EXPECT_NO_THROW(handlers.handle(bus, code));
+}
+
+TEST_F(PostCodeHandlersTest, HandleTargetGetUnitFailureContinues)
+{
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x01, 0x02};
+    handler.targets = {"missing.target"};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x01, 0x02};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _)).WillOnce(Return(-EIO));
+
+    EXPECT_NO_THROW(handlers.handle(bus, code));
+}
+
+TEST_F(PostCodeHandlersTest, HandleTargetGetUnitRuntimeErrorPropagates)
+{
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x01, 0x02};
+    handler.targets = {"throwing-getunit.target"};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x01, 0x02};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _))
+        .WillOnce(Throw(std::runtime_error("get unit")));
+
+    EXPECT_THROW(handlers.handle(bus, code), std::runtime_error);
+}
+
+TEST_F(PostCodeHandlersTest, HandleStartUnitRuntimeErrorPropagates)
+{
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x01, 0x02};
+    handler.targets = {"throwing-start.target"};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x01, 0x02};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _))
+        .WillOnce(Return(0))
+        .WillOnce(Throw(std::runtime_error("start unit")));
+
+    EXPECT_THROW(handlers.handle(bus, code), std::runtime_error);
+}
+
+TEST_F(PostCodeHandlersTest, HandleStartUnitFailurePropagates)
+{
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x01, 0x02};
+    handler.targets = {"failing.target"};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x01, 0x02};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _))
+        .WillOnce(Return(0))
+        .WillOnce(Return(-EIO));
+
+    EXPECT_THROW(handlers.handle(bus, code), sdbusplus::exception::SdBusError);
 }
 
 TEST_F(PostCodeHandlersTest, HandleWithEvent)
@@ -449,6 +532,45 @@ TEST_F(PostCodeHandlersTest, HandlerWithAllOptionalsSet)
     EXPECT_TRUE(found->resolution.has_value());
 
     EXPECT_NO_THROW(handlers.handle(bus, code));
+}
+
+TEST_F(PostCodeHandlersTest, SpecialMembersCopyAndMovePopulatedHandlers)
+{
+    PostCodeHandlers handlers;
+
+    PostCodeEvent event;
+    event.name = "xyz.openbmc_project.Common.Error.InternalFailure";
+    event.args["REASON"] = "test";
+
+    PostCodeHandler handler;
+    handler.name = "SpecialMemberHandler";
+    handler.description = "Exercises generated special members";
+    handler.primary = {0x01, 0x02, 0x03, 0x04};
+    handler.secondary = {0x05, 0x06};
+    handler.targets = {"target-a.service", "target-b.service"};
+    handler.event = event;
+    handler.mask = primarycode_t{0xFF, 0xF0, 0x0F, 0x00};
+    handler.resolution = "Replace test component";
+    handlers.handlers.push_back(handler);
+
+    PostCodeHandlers copied(handlers);
+    EXPECT_EQ(copied.handlers.size(), 1);
+    EXPECT_EQ(copied.handlers.front().name, handler.name);
+    EXPECT_TRUE(copied.handlers.front().event);
+
+    PostCodeHandlers copyAssigned;
+    copyAssigned = copied;
+    EXPECT_EQ(copyAssigned.handlers.size(), 1);
+    EXPECT_EQ(copyAssigned.handlers.front().targets.size(), 2);
+
+    PostCodeHandlers moved(std::move(copied));
+    EXPECT_EQ(moved.handlers.size(), 1);
+    EXPECT_EQ(moved.handlers.front().resolution, handler.resolution);
+
+    PostCodeHandlers moveAssigned;
+    moveAssigned = std::move(copyAssigned);
+    EXPECT_EQ(moveAssigned.handlers.size(), 1);
+    EXPECT_EQ(moveAssigned.handlers.front().mask, handler.mask);
 }
 
 TEST_F(PostCodeHandlersTest, FindWithMaskMaskMatchFirstHandlerSkipSecond)

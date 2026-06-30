@@ -21,12 +21,18 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/vector.hpp>
+#include <sdbusplus/sdbuspp_support/event.hpp>
 #include <sdbusplus/test/sdbus_mock.hpp>
+#include <xyz/openbmc_project/Logging/Entry/common.hpp>
 
+#include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <source_location>
 #include <sstream>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -40,6 +46,238 @@ namespace fs = std::filesystem;
 std::vector<uint8_t> decodeHexString(const std::string& hex);
 void from_json(const nlohmann::json& j, PostCodeEvent& event);
 void from_json(const nlohmann::json& j, PostCodeHandler& handler);
+
+namespace
+{
+constexpr auto rawInterface = "xyz.openbmc_project.State.Boot.Raw";
+constexpr auto hostInterface = "xyz.openbmc_project.State.Host";
+
+bool processBusFor(sdbusplus::bus_t& bus, std::chrono::milliseconds timeout)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    bool processed = false;
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        while (bus.process_discard())
+        {
+            processed = true;
+        }
+        bus.wait(1000);
+    }
+    while (bus.process_discard())
+    {
+        processed = true;
+    }
+    return processed;
+}
+
+bool processBusUntil(sdbusplus::bus_t& bus, std::chrono::milliseconds timeout,
+                     const auto& predicate)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        while (bus.process_discard())
+        {}
+        if (predicate())
+        {
+            return true;
+        }
+        bus.wait(1000);
+    }
+    while (bus.process_discard())
+    {}
+    return predicate();
+}
+
+void sendRawPostCodeSignal(
+    sdbusplus::bus_t& bus,
+    const std::map<std::string, std::variant<postcode_t>>& properties)
+{
+    auto signal =
+        bus.new_signal("/xyz/openbmc_project/state/boot/raw0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    signal.append(std::string(rawInterface), properties,
+                  std::vector<std::string>{});
+    signal.signal_send();
+    bus.flush();
+}
+
+void sendHostStateSignal(
+    sdbusplus::bus_t& bus,
+    const std::map<std::string, std::variant<std::string>>& properties)
+{
+    auto signal =
+        bus.new_signal("/xyz/openbmc_project/state/host0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    signal.append(std::string(hostInterface), properties,
+                  std::vector<std::string>{});
+    signal.signal_send();
+    bus.flush();
+}
+
+void writeValidVersionFiles(const fs::path& path)
+{
+    fs::create_directories(path);
+
+    std::ofstream osVer(path / "PostCodeDataVersion", std::ios::binary);
+    cereal::BinaryOutputArchive verArchive(osVer);
+    verArchive(static_cast<uint16_t>(1));
+    osVer.close();
+
+    std::ofstream osIdx(path / "CurrentBootCycleIndex", std::ios::binary);
+    cereal::BinaryOutputArchive idxArchive(osIdx);
+    idxArchive(static_cast<uint16_t>(0));
+    osIdx.close();
+
+    std::ofstream osCnt(path / "CurrentBootCycleCount", std::ios::binary);
+    cereal::BinaryOutputArchive cntArchive(osCnt);
+    cntArchive(static_cast<uint16_t>(0));
+    osCnt.close();
+}
+
+using LoggingEntry = sdbusplus::common::xyz::openbmc_project::logging::Entry;
+
+struct FakeLoggingState
+{
+    std::atomic_bool called = false;
+};
+
+int fakeLoggingCreate(sd_bus_message* rawMsg, void* userdata,
+                      sd_bus_error*) noexcept
+{
+    try
+    {
+        auto* state = static_cast<FakeLoggingState*>(userdata);
+        sdbusplus::message_t msg(rawMsg);
+        std::string message;
+        LoggingEntry::Level severity;
+        std::map<std::string, std::string> additionalData;
+        msg.read(message, severity, additionalData);
+        state->called = true;
+
+        auto reply = msg.new_method_return();
+        reply.append(
+            sdbusplus::object_path("/xyz/openbmc_project/logging/entry/1"));
+        reply.method_return();
+        return 1;
+    }
+    catch (...)
+    {
+        return -EINVAL;
+    }
+}
+
+const sd_bus_vtable fakeLoggingVTable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("Create", "ssa{ss}", "o", fakeLoggingCreate,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END};
+
+void throwRuntimeErrorEventHook(const nlohmann::json&,
+                                const std::source_location&)
+{
+    throw std::runtime_error("non-generated event hook");
+}
+
+class FakeLoggingService
+{
+  public:
+    FakeLoggingService() : bus(sdbusplus::bus::new_user())
+    {
+        int rc = sd_bus_add_object_vtable(
+            sdbusplus::details::bus_friend::get_busp(bus), &slot,
+            "/xyz/openbmc_project/logging",
+            "xyz.openbmc_project.Logging.Create", fakeLoggingVTable, &state);
+        if (rc < 0)
+        {
+            throw sdbusplus::exception::SdBusError(-rc,
+                                                   "sd_bus_add_object_vtable");
+        }
+
+        bus.request_name("xyz.openbmc_project.Logging");
+        worker = std::thread([this]() {
+            while (!stop)
+            {
+                try
+                {
+                    while (bus.process_discard())
+                    {}
+                    bus.wait(1000);
+                }
+                catch (...)
+                {
+                    return;
+                }
+            }
+        });
+    }
+
+    ~FakeLoggingService()
+    {
+        stop = true;
+        if (worker.joinable())
+        {
+            worker.join();
+        }
+        if (slot != nullptr)
+        {
+            sd_bus_slot_unref(slot);
+        }
+    }
+
+    bool wasCalled() const
+    {
+        return state.called;
+    }
+
+  private:
+    sdbusplus::bus_t bus;
+    sd_bus_slot* slot = nullptr;
+    FakeLoggingState state;
+    std::atomic_bool stop = false;
+    std::thread worker;
+};
+
+template <typename Tag>
+typename Tag::type getPrivateMember(Tag);
+
+template <typename Tag, typename Tag::type member>
+struct PrivateMemberAccessor
+{
+    friend typename Tag::type getPrivateMember(Tag)
+    {
+        return member;
+    }
+};
+
+struct SerializeTag
+{
+    using type = fs::path (PostCode::*)(const fs::path&);
+    friend type getPrivateMember(SerializeTag);
+};
+
+template struct PrivateMemberAccessor<SerializeTag, &PostCode::serialize>;
+
+struct DeserializeTag
+{
+    using type = bool (PostCode::*)(const fs::path&, uint16_t&);
+    friend type getPrivateMember(DeserializeTag);
+};
+
+template struct PrivateMemberAccessor<DeserializeTag, &PostCode::deserialize>;
+
+struct DeserializePostCodesTag
+{
+    using type = bool (PostCode::*)(const fs::path&,
+                                    std::map<uint64_t, postcode_t>&);
+    friend type getPrivateMember(DeserializePostCodesTag);
+};
+
+template struct PrivateMemberAccessor<DeserializePostCodesTag,
+                                      &PostCode::deserializePostCodes>;
+
+} // namespace
 
 class TestablePostCode : public PostCode
 {
@@ -330,6 +568,50 @@ TEST_F(PostCodeTest, PostCodeEventRaise)
     EXPECT_NO_THROW(event.raise());
 }
 
+TEST_F(PostCodeTest, PostCodeEventRaiseGeneratedEvent)
+{
+    PostCodeEvent event;
+    event.name = "xyz.openbmc_project.Logging.Cleared";
+    event.args["NUMBER_OF_LOGS"] = 1;
+
+    EXPECT_THROW(event.raise(), sdbusplus::exception::SdBusError);
+}
+
+TEST_F(PostCodeTest, PostCodeEventRaisePropagatesNonGeneratedHook)
+{
+    static const bool registered = []() {
+        sdbusplus::sdbuspp::register_event(
+            "xyz.openbmc_project.Test.NonGenerated",
+            throwRuntimeErrorEventHook);
+        return true;
+    }();
+    (void)registered;
+
+    PostCodeEvent event;
+    event.name = "xyz.openbmc_project.Test.NonGenerated";
+
+    EXPECT_THROW(event.raise(), std::runtime_error);
+}
+
+TEST_F(PostCodeTest, PostCodeEventRaiseGeneratedEventWithFakeLogging)
+{
+    try
+    {
+        FakeLoggingService service;
+
+        PostCodeEvent event;
+        event.name = "xyz.openbmc_project.Logging.Cleared";
+        event.args["NUMBER_OF_LOGS"] = 1;
+
+        EXPECT_NO_THROW(event.raise());
+        EXPECT_TRUE(service.wasCalled());
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        GTEST_SKIP() << "session bus unavailable: " << e.what();
+    }
+}
+
 TEST_F(PostCodeTest, FromJsonPostCodeEvent)
 {
     nlohmann::json j = {{"name", "TestEvent"},
@@ -564,6 +846,156 @@ void simulateDbusPropertyChangeHostState(
     }
     catch (const std::exception& e)
     {}
+}
+
+TEST(PostCodeDbusSignalTest, RawValuePropertySignalSavesPostCode)
+{
+    fs::path testPath = fs::temp_directory_path() / "post_code_signal_raw0";
+    fs::remove_all(testPath);
+    writeValidVersionFiles(testPath);
+
+    try
+    {
+        auto receiverBus = sdbusplus::bus::new_user();
+        auto senderBus = sdbusplus::bus::new_user();
+
+        EventPtr eventPtr;
+        sd_event* event = nullptr;
+        sd_event_default(&event);
+        eventPtr.reset(event);
+
+        PostCodeHandlers handlers;
+        TestablePostCode postCode(
+            receiverBus, "/test/signal/raw", eventPtr, 0, handlers,
+            (fs::temp_directory_path() / "post_code_signal_raw").string());
+        processBusFor(receiverBus, std::chrono::milliseconds(50));
+
+        primarycode_t primary = {0xAA, 0xBB, 0xCC};
+        secondarycode_t secondary = {0xDD};
+        postcode_t code = std::make_tuple(primary, secondary);
+
+        sendRawPostCodeSignal(senderBus, {{"Value", code}});
+
+        ASSERT_TRUE(processBusUntil(
+            receiverBus, std::chrono::milliseconds(500),
+            [&postCode]() { return !postCode.getPostCodes(1).empty(); }));
+
+        const auto codes = postCode.getPostCodes(1);
+        ASSERT_EQ(codes.size(), 1);
+        EXPECT_EQ(std::get<0>(codes.front()), primary);
+        EXPECT_EQ(std::get<1>(codes.front()), secondary);
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        GTEST_SKIP() << "session bus unavailable: " << e.what();
+    }
+
+    fs::remove_all(testPath);
+}
+
+TEST(PostCodeDbusSignalTest, RawPropertySignalWithoutValueIsIgnored)
+{
+    fs::path testPath =
+        fs::temp_directory_path() / "post_code_signal_raw_ignore0";
+    fs::remove_all(testPath);
+    writeValidVersionFiles(testPath);
+
+    try
+    {
+        auto receiverBus = sdbusplus::bus::new_user();
+        auto senderBus = sdbusplus::bus::new_user();
+
+        EventPtr eventPtr;
+        sd_event* event = nullptr;
+        sd_event_default(&event);
+        eventPtr.reset(event);
+
+        PostCodeHandlers handlers;
+        TestablePostCode postCode(
+            receiverBus, "/test/signal/raw_ignore", eventPtr, 0, handlers,
+            (fs::temp_directory_path() / "post_code_signal_raw_ignore")
+                .string());
+        processBusFor(receiverBus, std::chrono::milliseconds(50));
+
+        primarycode_t primary = {0x10, 0x20};
+        secondarycode_t secondary = {};
+        postcode_t code = std::make_tuple(primary, secondary);
+
+        sendRawPostCodeSignal(senderBus, {{"Ignored", code}});
+        EXPECT_TRUE(processBusFor(receiverBus, std::chrono::milliseconds(500)));
+        EXPECT_TRUE(postCode.getPostCodes(1).empty());
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        GTEST_SKIP() << "session bus unavailable: " << e.what();
+    }
+
+    fs::remove_all(testPath);
+}
+
+TEST(PostCodeDbusSignalTest, HostStatePropertySignalsCoverBranches)
+{
+    fs::path testPath = fs::temp_directory_path() / "post_code_signal_host0";
+    fs::remove_all(testPath);
+    writeValidVersionFiles(testPath);
+
+    try
+    {
+        auto receiverBus = sdbusplus::bus::new_user();
+        auto senderBus = sdbusplus::bus::new_user();
+
+        EventPtr eventPtr;
+        sd_event* event = nullptr;
+        sd_event_default(&event);
+        eventPtr.reset(event);
+
+        PostCodeHandlers handlers;
+        TestablePostCode postCode(
+            receiverBus, "/test/signal/host", eventPtr, 0, handlers,
+            (fs::temp_directory_path() / "post_code_signal_host").string());
+        processBusFor(receiverBus, std::chrono::milliseconds(50));
+
+        sendHostStateSignal(
+            senderBus, {{"UnrelatedHostProperty", std::string("ignored")}});
+        EXPECT_TRUE(processBusFor(receiverBus, std::chrono::milliseconds(500)));
+
+        sendHostStateSignal(senderBus, {{"CurrentHostState",
+                                         std::string("invalid-host-state")}});
+        EXPECT_TRUE(processBusFor(receiverBus, std::chrono::milliseconds(500)));
+
+        sendHostStateSignal(
+            senderBus,
+            {{"CurrentHostState",
+              std::string(
+                  "xyz.openbmc_project.State.Host.HostState.Running")}});
+        EXPECT_TRUE(processBusFor(receiverBus, std::chrono::milliseconds(500)));
+
+        sendHostStateSignal(
+            senderBus,
+            {{"CurrentHostState",
+              std::string("xyz.openbmc_project.State.Host.HostState.Off")}});
+        EXPECT_TRUE(processBusFor(receiverBus, std::chrono::milliseconds(500)));
+        EXPECT_TRUE(postCode.getPostCodes(1).empty());
+
+        primarycode_t primary = {0x01, 0x02};
+        secondarycode_t secondary = {};
+        postCode.savePostCodes(std::make_tuple(primary, secondary));
+        ASSERT_FALSE(postCode.getPostCodes(1).empty());
+
+        sendHostStateSignal(
+            senderBus,
+            {{"CurrentHostState",
+              std::string("xyz.openbmc_project.State.Host.HostState.Off")}});
+        ASSERT_TRUE(processBusUntil(
+            receiverBus, std::chrono::milliseconds(500),
+            [&postCode]() { return postCode.getPostCodes(1).empty(); }));
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        GTEST_SKIP() << "session bus unavailable: " << e.what();
+    }
+
+    fs::remove_all(testPath);
 }
 
 TEST_F(PostCodeTest, SimulateDbusPropertyChangeTriggerSavePostCodes)
@@ -969,6 +1401,45 @@ TEST_F(PostCodeTest, IncrBootCycleWrapAround)
     EXPECT_NO_THROW(codes = postCode2.getPostCodes(1));
 }
 
+TEST_F(PostCodeTest, SavePostCodesWrapsBootCycleAndClampsCount)
+{
+    fs::path wrapDir = testDir / "wrap0";
+    fs::create_directories(wrapDir);
+
+    std::ofstream osVer(wrapDir / "PostCodeDataVersion", std::ios::binary);
+    cereal::BinaryOutputArchive verArchive(osVer);
+    verArchive(static_cast<uint16_t>(1));
+    osVer.close();
+
+    std::ofstream osIdx(wrapDir / "CurrentBootCycleIndex", std::ios::binary);
+    cereal::BinaryOutputArchive idxArchive(osIdx);
+    idxArchive(static_cast<uint16_t>(MAX_BOOT_CYCLE_COUNT));
+    osIdx.close();
+
+    std::ofstream osCnt(wrapDir / "CurrentBootCycleCount", std::ios::binary);
+    cereal::BinaryOutputArchive cntArchive(osCnt);
+    cntArchive(static_cast<uint16_t>(MAX_BOOT_CYCLE_COUNT));
+    osCnt.close();
+
+    EventPtr eventPtr2;
+    sd_event* event2 = nullptr;
+    sd_event_default(&event2);
+    eventPtr2.reset(event2);
+
+    PostCodeHandlers handlers2;
+    TestablePostCode postCode2(bus, "/test/wrap", eventPtr2, 0, handlers2,
+                               (testDir / "wrap").string());
+
+    primarycode_t primary = {0xAA, 0x55};
+    secondarycode_t secondary = {};
+    postCode2.savePostCodes(std::make_tuple(primary, secondary));
+
+    auto codes = postCode2.getPostCodes(1);
+    ASSERT_FALSE(codes.empty());
+    EXPECT_EQ(std::get<0>(codes.back()), primary);
+    EXPECT_EQ(postCode2.currentBootCycleCount(), MAX_BOOT_CYCLE_COUNT);
+}
+
 TEST_F(PostCodeTest, SerializeExceptionHandling)
 {
     postCode->deleteAll();
@@ -1357,6 +1828,57 @@ TEST_F(PostCodeTest, DeserializeIndexFileCerealException)
     });
 }
 
+TEST_F(PostCodeTest, DeserializeEmptyIndexFileCerealException)
+{
+    fs::path cerealDir = testDir / "empty_idx0";
+    fs::create_directories(cerealDir);
+
+    std::ofstream osVer(cerealDir / "PostCodeDataVersion", std::ios::binary);
+    cereal::BinaryOutputArchive verArchive(osVer);
+    verArchive(static_cast<uint16_t>(1));
+    osVer.close();
+
+    std::ofstream(cerealDir / "CurrentBootCycleIndex").close();
+
+    EventPtr eventPtr2;
+    sd_event* event2 = nullptr;
+    sd_event_default(&event2);
+    eventPtr2.reset(event2);
+
+    PostCodeHandlers handlers2;
+    EXPECT_NO_THROW({
+        PostCode postCode2(bus, "/test/empty-index", eventPtr2, 0, handlers2,
+                           (testDir / "empty_idx").string());
+    });
+}
+
+TEST_F(PostCodeTest, DeserializeFilesystemErrorFromTooLongPath)
+{
+    auto deserialize = getPrivateMember(DeserializeTag{});
+    uint16_t index = 0;
+    fs::path tooLongPath = testDir / std::string(5000, 'x');
+
+    EXPECT_FALSE((postCode.get()->*deserialize)(tooLongPath, index));
+}
+
+TEST_F(PostCodeTest, DeserializePostCodesFilesystemErrorFromTooLongPath)
+{
+    auto deserializePostCodes = getPrivateMember(DeserializePostCodesTag{});
+    std::map<uint64_t, postcode_t> codes;
+    fs::path tooLongPath = testDir / std::string(5000, 'x');
+
+    EXPECT_FALSE((postCode.get()->*deserializePostCodes)(tooLongPath, codes));
+    EXPECT_TRUE(codes.empty());
+}
+
+TEST_F(PostCodeTest, SerializeTooLongPathReturnsEmpty)
+{
+    auto serialize = getPrivateMember(SerializeTag{});
+    fs::path tooLongPath = testDir / std::string(5000, 'x');
+
+    EXPECT_TRUE((postCode.get()->*serialize)(tooLongPath).empty());
+}
+
 TEST_F(PostCodeTest, DeserializeCountFileCerealException)
 {
     fs::path cerealDir = testDir / "cereal_cnt0";
@@ -1382,6 +1904,41 @@ TEST_F(PostCodeTest, DeserializeCountFileCerealException)
         PostCode postCode2(bus, "/test/path2", eventPtr2, 0, handlers2,
                            pathPrefix);
     });
+}
+
+TEST_F(PostCodeTest, DeserializePostCodesEmptyFileCerealException)
+{
+    fs::path cerealDir = testDir / "empty_codes0";
+    fs::create_directories(cerealDir);
+
+    std::ofstream osVer(cerealDir / "PostCodeDataVersion", std::ios::binary);
+    cereal::BinaryOutputArchive verArchive(osVer);
+    verArchive(static_cast<uint16_t>(1));
+    osVer.close();
+
+    std::ofstream osIdx(cerealDir / "CurrentBootCycleIndex", std::ios::binary);
+    cereal::BinaryOutputArchive idxArchive(osIdx);
+    idxArchive(static_cast<uint16_t>(1));
+    osIdx.close();
+
+    std::ofstream osCnt(cerealDir / "CurrentBootCycleCount", std::ios::binary);
+    cereal::BinaryOutputArchive cntArchive(osCnt);
+    cntArchive(static_cast<uint16_t>(1));
+    osCnt.close();
+
+    std::ofstream(cerealDir / "1").close();
+
+    EventPtr eventPtr2;
+    sd_event* event2 = nullptr;
+    sd_event_default(&event2);
+    eventPtr2.reset(event2);
+
+    PostCodeHandlers handlers2;
+    PostCode postCode2(bus, "/test/empty-codes", eventPtr2, 0, handlers2,
+                       (testDir / "empty_codes").string());
+
+    auto codes = postCode2.getPostCodes(1);
+    EXPECT_TRUE(codes.empty());
 }
 
 TEST_F(PostCodeTest, SavePostCodesSecondCallMonotonicTime)
@@ -1986,6 +2543,25 @@ TEST_F(PostCodeTest, SavePostCodesSizeLimitExact)
     {
         EXPECT_EQ(codes.size(), 512);
     }
+}
+
+// Insert MAX_POST_CODE_SIZE_PER_CYCLE + 1 codes with guaranteed unique
+// timestamps (2 µs sleep ensures the steady_clock offset differs each call).
+// The 513th insert must trigger the size-limit erase branch at
+// post_code.cpp:412-414.
+TEST_F(PostCodeTest, SavePostCodesSizeLimitErase)
+{
+    for (int i = 0; i <= MAX_POST_CODE_SIZE_PER_CYCLE; ++i)
+    {
+        primarycode_t primary = {static_cast<uint8_t>(i & 0xFF),
+                                 static_cast<uint8_t>((i >> 8) & 0xFF)};
+        secondarycode_t secondary = {};
+        callSavePostCodes(std::make_tuple(primary, secondary));
+        std::this_thread::sleep_for(std::chrono::microseconds(2));
+    }
+
+    auto codes = postCode->getPostCodes(1);
+    EXPECT_EQ(static_cast<int>(codes.size()), MAX_POST_CODE_SIZE_PER_CYCLE);
 }
 
 TEST_F(PostCodeTest, SavePostCodesEmptyPostCodesFirstCode)
