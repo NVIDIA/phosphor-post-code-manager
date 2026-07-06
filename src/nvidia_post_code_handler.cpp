@@ -78,6 +78,7 @@ constexpr uint8_t efiSubclassRom = 0xC0;
 constexpr uint8_t efiSubclassPscbl = 0xC1;
 constexpr uint8_t efiSubclassSipMin = 0xC0;
 constexpr uint8_t efiSubclassSipMax = 0xDF;
+constexpr uint8_t piClassMax = 0x03;
 
 // Opcode constants for reset source operations
 // PSC_ROM (subclass 0xC0): opcodes 0x01 and 0x03 carry reset source in instance
@@ -86,39 +87,43 @@ constexpr uint8_t opcodeRomUsbMsgInit = 0x03;
 // PSC_FMC (subclass 0xC1): opcode 0x03 carries reset source in instance
 constexpr uint8_t opcodeFmcNvdlinkLsLinkUp = 0x03;
 
+constexpr auto compareByFirst = [](const auto& entry, const auto& key) {
+    return entry.first < key;
+};
+
 static constexpr std::array<std::string_view, 32> sipSubclassNames = {
-    "PSCROM",           // 0xC0
-    "PSCFMC",           // 0xC1
-    "PSCRT",            // 0xC2
-    "MB1",              // 0xC3
-    "BPMP_FW",          // 0xC4
-    "MB2",              // 0xC5
-    "ATF_BL31",         // 0xC6
-    "RMM",              // 0xC7
-    "HAFNIUM",          // 0xC8
-    "UEFI",             // 0xC9
-    "UEFI_STMM",        // 0xCA
-    "OOBHUB_FW",        // 0xCB
-    "RAS_FW",           // 0xCC
-    "MSEQ_FW",          // 0xCD
-    "SEGMENT_CTRL0_FW", // 0xCE
-    "SEGMENT_CTRL1_FW", // 0xCF
-    "SEGMENT_CTRL2_FW", // 0xD0
-    "SEGMENT_CTRL3_FW", // 0xD1
-    "SEGMENT_CTRL4_FW", // 0xD2
-    "SEGMENT_CTRL5_FW", // 0xD3
-    "NVLINK_C2C_0",     // 0xD4
-    "NVLINK_C2C_1",     // 0xD5
-    "NVCLINK_0",        // 0xD6
-    "NVCLINK_1",        // 0xD7
-    "NVCLINK_2",        // 0xD8
-    "NVCLINK_3",        // 0xD9
-    "NVCLINK_4",        // 0xDA
-    "NVCLINK_5",        // 0xDB
-    "NVDLINK_S_0",      // 0xDC
-    "NVDLINK_S_1",      // 0xDD
-    "NVDLINK_C_0",      // 0xDE
-    "NVDLINK_C_1",      // 0xDF
+    "PSCROM",     // 0xC0
+    "PSCFMC",     // 0xC1
+    "PSCRT",      // 0xC2
+    "MB1",        // 0xC3
+    "BPMP_FW",    // 0xC4
+    "MB2",        // 0xC5
+    "ATF_BL31",   // 0xC6
+    "RMM",        // 0xC7
+    "HAFNIUM",    // 0xC8
+    "UEFI",       // 0xC9
+    "UEFI_STMM",  // 0xCA
+    "OOBHUB_FW",  // 0xCB
+    "RAS_FW",     // 0xCC
+    "MSEQ_FW",    // 0xCD
+    "PCORE0_FW",  // 0xCE
+    "PCORE1_FW",  // 0xCF
+    "PCORE2_FW",  // 0xD0
+    "PCORE3_FW",  // 0xD1
+    "PCORE4_FW",  // 0xD2
+    "PCORE5_FW",  // 0xD3
+    "C2C_GRS0",   // 0xD4
+    "C2C_GRS1",   // 0xD5
+    "C2C_UPHY0",  // 0xD6
+    "C2C_UPHY1",  // 0xD7
+    "C2C_UPHY2",  // 0xD8
+    "C2C_UPHY3",  // 0xD9
+    "C2C_UPHY4",  // 0xDA
+    "C2C_UPHY5",  // 0xDB
+    "C2C_LPI_S0", // 0xDC
+    "C2C_LPI_S1", // 0xDD
+    "C2C_LPI_C0", // 0xDE
+    "C2C_LPI_C1", // 0xDF
 };
 
 using SipOpKey = std::tuple<uint8_t, uint8_t, uint8_t>;
@@ -126,7 +131,17 @@ using SipOpEntry = std::pair<SipOpKey, std::string_view>;
 static const std::vector<SipOpEntry> sipOperationNames = []() {
     std::vector<SipOpEntry> v = {
         {{0xC0, 1, 0x01}, "PSC_ROM_PC_I2C_EXT_MSG_INIT"},
+        {{0xC0, 1, 0x02}, "PSC_ROM_PC_BOOT_MODE_SEL_DONE"},
         {{0xC0, 1, 0x03}, "PSC_ROM_PC_USB_EXT_MSG_INIT"},
+        {{0xC0, 1, 0x04}, "PSC_ROM_PC_QSPI0_DEV_INIT"},
+        {{0xC0, 1, 0x05}, "PSC_ROM_PC_USB2_DEV_INIT"},
+        {{0xC0, 1, 0x06}, "PSC_ROM_PC_OCPRC_DEV_INIT"},
+        {{0xC0, 1, 0x07}, "PSC_ROM_PC_BOOT_CHAIN_SEL"},
+        {{0xC0, 1, 0x08}, "PSC_ROM_PC_BOOT_IMAGE_LOAD_DONE"},
+        {{0xC0, 1, 0x09}, "PSC_ROM_PC_DOT_S2A_VALIDATION_DONE"},
+        {{0xC0, 1, 0x0A}, "PSC_ROM_PC_FMC_VALIDATION_DONE"},
+        {{0xC0, 1, 0x0B}, "PSC_ROM_PC_ROM_EXIT"},
+        {{0xC0, 1, 0x0C}, "PSC_ROM_PC_DOT_RECOVERY"},
         {{0xC0, 2, 0x01}, "PSC_ROM_EC_I2C_EXT_MSG_FAIL"},
         {{0xC0, 2, 0x02}, "PSC_ROM_EC_BOOT_MODE_SEL_FAIL"},
         {{0xC0, 2, 0x03}, "PSC_ROM_EC_USB_EXT_MSG_FAIL"},
@@ -161,20 +176,72 @@ static const std::vector<SipOpEntry> sipOperationNames = []() {
         {{0xC0, 2, 0x20}, "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_SVN_FUSE_RATCHET_FAIL"},
         {{0xC0, 2, 0x21}, "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_SVN_CSH_RATCHET_FAIL"},
         {{0xC0, 2, 0x22}, "PSC_ROM_EC_FMC_IMAGE_VOL_DOT_CSH_RATCHET_FAIL"},
-        {{0xC1, 1, 0x03}, "PSC_FMC_PC_NVDLINK_LS_LINK_UP"},
+        {{0xC1, 1, 0x01}, "PSC_FMC_PC_INIT"},
+        {{0xC1, 1, 0x02}, "PSC_FMC_PC_BOOT_MODE"},
+        {{0xC1, 1, 0x03}, "PSC_FMC_PC_LPI_LS_LINK_UP"},
+        {{0xC1, 1, 0x04}, "PSC_FMC_PC_FW_QSPI_REINIT"},
+        {{0xC1, 1, 0x05}, "PSC_FMC_PC_BOOT_CHAIN_LEDGER_SELECT"},
+        {{0xC1, 1, 0x06}, "PSC_FMC_PC_DATA_QSPI_INIT"},
+        {{0xC1, 1, 0x07}, "PSC_FMC_PC_DEBUG_TOKEN_LOAD"},
+        {{0xC1, 1, 0x08}, "PSC_FMC_PC_BINARY_LOAD"},
+        {{0xC1, 1, 0x09}, "PSC_FMC_PC_BOOTSTRAP"},
+        {{0xC1, 1, 0x0A}, "PSC_FMC_PC_WAIT_FOR_DOT_CAK_STATUS"},
+        {{0xC1, 1, 0x0B}, "PSC_FMC_PC_CSA"},
+        {{0xC1, 1, 0x0C}, "PSC_FMC_PC_PLDM_T5_READY"},
+        {{0xC1, 1, 0x0D}, "PSC_FMC_PC_EARLY_BOOTVARS_LOAD"},
+        {{0xC1, 1, 0x0E}, "PSC_FMC_PC_EXIT"},
+        {{0xC1, 1, 0x0F}, "PSC_FMC_PC_SS_DETECTION"},
+        {{0xC1, 1, 0x10}, "PSC_FMC_PC_SOCKET_ID_PREWAR_DONE"},
+        {{0xC1, 1, 0x11}, "PSC_FMC_PC_SOCKET_ID_PREWAR_PREV_APPLIED"},
+        {{0xC1, 1, 0x12}, "PSC_FMC_PC_SOCKET_ID_PREWAR_SKIPPED"},
+        {{0xC1, 1, 0x13}, "PSC_FMC_PC_SOCKET_ID_WAR_SKIPPED"},
+        {{0xC1, 1, 0x14}, "PSC_FMC_PC_SOCKET_ID_WAR_APPLIED_CORRECT"},
+        {{0xC1, 1, 0x15}, "PSC_FMC_PC_SOCKET_ID_WAR_SUCCESS"},
         {{0xC1, 2, 0x01}, "PSC_FMC_EC_FUSE_CRC_FAILED"},
-        {{0xC1, 2, 0x02}, "PSC_FMC_EC_NVDLINK_LS_LINK_FAILED"},
+        {{0xC1, 2, 0x02}, "PSC_FMC_EC_LPI_LS_LINK_FAILED"},
         {{0xC1, 2, 0x03}, "PSC_FMC_EC_BOOT_CHAIN_LEDGER_INVALID"},
         {{0xC1, 2, 0x04}, "PSC_FMC_EC_BOOT_CHAIN_LEDGER_NOT_BOOTABLE"},
         {{0xC1, 2, 0x05}, "PSC_FMC_EC_BOOT_CHAIN_LEDGER_MISMATCH"},
         {{0xC1, 2, 0x06}, "PSC_FMC_EC_DEBUG_TOKEN_SANITY_FAIL"},
         {{0xC1, 2, 0x07}, "PSC_FMC_EC_DEBUG_TOKEN_AUTHENTICATION_FAIL"},
         {{0xC1, 2, 0x08}, "PSC_FMC_EC_SANITY_FAILED"},
+        {{0xC1, 2, 0x09}, "PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED"},
         {{0xC1, 2, 0x0A}, "PSC_FMC_EC_STAGE2_AUTHENTICATION_FAILED"},
-        {{0xC1, 2, 0x0B}, "PSC_FMC_SVN_CHECK_FAILED"},
+        {{0xC1, 2, 0x0B}, "PSC_FMC_EC_SVN_CHECK_FAILED"},
         {{0xC1, 2, 0x0C}, "PSC_FMC_EC_HALT_DISABLED_SOCKET"},
-        {{0xC3, 2, 0x02}, "MB1_EC_NVDLINK_HS_TRAIN_FAILED"},
-        {{0xC3, 2, 0x03}, "MB1_EC_NVDLINK_LLI_INIT_FAILED"},
+        {{0xC1, 2, 0x0D}, "PSC_FMC_EC_MEM_FUSE_CRC_FAILED"},
+        {{0xC1, 2, 0x0E}, "PSC_FMC_EC_CALIPTRA_MAILBOX_FAILED"},
+        {{0xC1, 2, 0x0F}, "PSC_FMC_EC_CSA_FAILED"},
+        {{0xC1, 2, 0x10}, "PSC_FMC_EC_DOT_FAILED"},
+        {{0xC1, 2, 0x11}, "PSC_FMC_EC_EARLY_BOOTVARS_LOAD_FAILED"},
+        {{0xC1, 2, 0x12}, "PSC_FMC_EC_SOCKET_ID_PREWAR_SCB_FAILED"},
+        {{0xC1, 2, 0x13}, "PSC_FMC_EC_SOCKET_ID_PREWAR_SDIE_STRAP_FAILED"},
+        {{0xC1, 2, 0x14}, "PSC_FMC_EC_SOCKET_ID_WAR_S_C_FAILED"},
+        {{0xC1, 2, 0x15}, "PSC_FMC_EC_SOCKET_ID_WAR_S_C_FAILED_AFTER_APPLY"},
+        {{0xC2, 1, 0x01}, "PSC_RT_PC_INIT"},
+        {{0xC2, 1, 0x02}, "PSC_RT_PC_PLDM_T5_READY"},
+        {{0xC3, 1, 0x01}, "MB1_PC_INIT"},
+        {{0xC3, 1, 0x03}, "MB1_PC_POWER_PROFILE_SELECT"},
+        {{0xC3, 1, 0x04}, "MB1_PC_C2CLPI_HS_TRAIN"},
+        {{0xC3, 1, 0x05}, "MB1_PC_C2CLLI_INIT"},
+        {{0xC3, 1, 0x06}, "MB1_PC_C2CGRS_START"},
+        {{0xC3, 1, 0x07}, "MB1_PC_UPHY_CALIB"},
+        {{0xC3, 1, 0x08}, "MB1_PC_C2CUPHY_START"},
+        {{0xC3, 1, 0x09}, "MB1_PC_BOOTSTRAP"},
+        {{0xC3, 1, 0x0A}, "MB1_PC_SPD_READ"},
+        {{0xC3, 1, 0x0B}, "MB1_PC_DRAM_INIT"},
+        {{0xC3, 1, 0x0C}, "MB1_PC_PCORE_INIT"},
+        {{0xC3, 1, 0x0D}, "MB1_PC_C2CGRS_INIT"},
+        {{0xC3, 1, 0x0E}, "MB1_PC_C2CUPHY_INIT"},
+        {{0xC3, 1, 0x0F}, "MB1_PC_CSWP_CONFIG"},
+        {{0xC3, 1, 0x10}, "MB1_PC_DRAM_ECC_INIT"},
+        {{0xC3, 1, 0x11}, "MB1_PC_WAIT_FOR_CSWP_DEBUG"},
+        {{0xC3, 1, 0x12}, "MB1_PC_EXIT"},
+        {{0xC3, 1, 0x13}, "MB1_PC_UCF_INIT"},
+        {{0xC3, 2, 0x01}, "MB1_EC_FUSE_RECORD_INTEGRITY_FAILED"},
+        {{0xC3, 2, 0x02}, "MB1_EC_C2CLPI_HS_TRAIN_FAILED"},
+        {{0xC3, 2, 0x03}, "MB1_EC_C2CLLI_INIT_FAILED"},
+        {{0xC3, 2, 0x04}, "MB1_EC_RAS_POLL_FAILED"},
         {{0xC3, 2, 0x05}, "MB1_EC_CARVEOUT_ALLOC_FAILED"},
         {{0xC3, 2, 0x06}, "MB1_EC_SPD_READ_FAILED"},
         {{0xC3, 2, 0x07}, "MB1_EC_MEMORY_HETEROGENOUS"},
@@ -185,13 +252,58 @@ static const std::vector<SipOpEntry> sipOperationNames = []() {
         {{0xC3, 2, 0x0C}, "MB1_EC_DRAM_REGISTER_CHECK_FAILED"},
         {{0xC3, 2, 0x0D}, "MB1_EC_CHANNEL_LOW_COUNT"},
         {{0xC3, 2, 0x0E}, "MB1_EC_UNCORRECTED_ERROR_OVERFLOW"},
-        {{0xC3, 2, 0x0F}, "MB1_EC_CHANNEL_RETIRED_TRAINING_BOOT"},
+        {{0xC3, 2, 0x0F}, "MB1_EC_CHANNEL_RETIRED_TRAINING"},
+        {{0xC3, 2, 0x10}, "MB1_EC_CHANNEL_RETIRED_TRAINING"},
         {{0xC3, 2, 0x11}, "MB1_EC_CHANNEL_RETIRED_UNCORRECTED_ERROR_OVERFLOW"},
         {{0xC3, 2, 0x12}, "MB1_EC_CHANNEL_RETIRED_ALIAS_CHECK"},
-        {{0xC3, 2, 0x13}, "MB1_EC_SEGMENT_CTRL_TLV_SANITY_FAILED"},
-        {{0xC3, 2, 0x14}, "MB1_EC_NVLINK_C2C_TRAIN_FAILED"},
-        {{0xC3, 2, 0x15}, "MB1_EC_NVCLINK_TRAIN_FAILED"},
+        {{0xC3, 2, 0x13}, "MB1_EC_PCORE_TLV_SANITY_FAILED"},
+        {{0xC3, 2, 0x14}, "MB1_EC_C2CGRS_TRAIN_FAILED"},
+        {{0xC3, 2, 0x15}, "MB1_EC_C2CUPHY_TRAIN_FAILED"},
         {{0xC3, 2, 0x16}, "MB1_EC_DRAM_ECC_FAILED"},
+        {{0xC3, 2, 0x17}, "MB1_EC_PLLE_LOCK_FAILED"},
+        {{0xC3, 2, 0x18}, "MB1_EC_SEGMENT_CTRL_PXIR_MBOX_FAILED"},
+        {{0xC3, 2, 0x19}, "MB1_EC_UCF_ERROR"},
+        {{0xC4, 1, 0x00}, "BPMP_FW_PC_LOGGING_INIT"},
+        {{0xC4, 1, 0x01}, "BPMP_FW_PC_CLK_INIT"},
+        {{0xC4, 1, 0x02}, "BPMP_FW_PC_CLK_CAL"},
+        {{0xC4, 1, 0x03}, "BPMP_FW_PC_REGULATOR_INIT"},
+        {{0xC4, 1, 0x04}, "BPMP_FW_PC_AVFS_INIT"},
+        {{0xC4, 1, 0x05}, "BPMP_FW_PC_IPMU_INIT"},
+        {{0xC4, 1, 0x06}, "BPMP_FW_PC_CLK_LATE"},
+        {{0xC4, 1, 0x07}, "BPMP_FW_PC_C2C_INIT"},
+        {{0xC4, 1, 0x08}, "BPMP_FW_PC_CLK_POST"},
+        {{0xC4, 1, 0x09}, "BPMP_FW_PC_SLC_INIT"},
+        {{0xC4, 1, 0x0A}, "BPMP_FW_PC_MRQ_AVAILABLE"},
+        {{0xC4, 1, 0x3F}, "BPMP_FW_PC_INIT_COMPLETE"},
+        {{0xC5, 1, 0x01}, "MB2_PC_INIT"},
+        {{0xC5, 1, 0x02}, "MB2_PC_DRAM_ECC_INIT"},
+        {{0xC5, 1, 0x03}, "MB2_PC_SET_HW_BREAK_POINT"},
+        {{0xC5, 1, 0x04}, "MB2_PC_EXIT"},
+        {{0xC6, 1, 0x01}, "BL31_PC_EARLY_PLAT_SETUP_STARTED"},
+        {{0xC6, 1, 0x02}, "BL31_PC_EARLY_PLAT_SETUP_COMPLETE"},
+        {{0xC6, 1, 0x03}, "BL31_PC_PSC_MAILBOX_INIT_COMPLETE"},
+        {{0xC6, 1, 0x04}, "BL31_PC_RME_GPT_MEM_MAP_COMPLETE"},
+        {{0xC6, 1, 0x05}, "BL31_PC_EL3_RMM_SHARED_MEM_MAP_COMPLETE"},
+        {{0xC6, 1, 0x06}, "BL31_PC_LATE_PLAT_SETUP_COMPLETE"},
+        {{0xC6, 1, 0x07}, "BL31_PC_BOOT_COMPLETE"},
+        {{0xC6, 1, 0x08}, "BL31_PC_PLAT_PARAMS_PARSING_COMPLETE"},
+        {{0xC6, 1, 0x09}, "BL31_PC_RME_NS_DRAM_BANK_MAPPING_COMPLETE"},
+        {{0xC6, 2, 0x01}, "BL31_EC_PSC_MAILBOX_UNAVAIL"},
+        {{0xC6, 2, 0x02}, "BL31_EC_TEGRA_BPMP_IPC_INIT_FAILED"},
+        {{0xC6, 2, 0x03}, "BL31_EC_FDT_CHECK_HEADER_INVALID"},
+        {{0xC6, 2, 0x04}, "BL31_EC_BPMP_IVC_BASE_ADDRESS_INVALID"},
+        {{0xC6, 2, 0x05}, "BL31_EC_FDT_SOCKET0_PARSE_FAILED"},
+        {{0xC6, 2, 0x06}, "BL31_EC_FDT_SOCKET0_NODE_NOT_FOUND"},
+        {{0xC6, 2, 0x07}, "BL31_EC_FDT_SOCKET1_PARSE_FAILED"},
+        {{0xC6, 2, 0x08}, "BL31_EC_FDT_SOCKET1_NODE_NOT_FOUND"},
+        {{0xC6, 2, 0x09}, "BL31_EC_FDT_GPU_NODES_INVALID"},
+        {{0xC6, 2, 0x0A}, "BL31_EC_FDT_PCIE_RC_NODES_INVALID"},
+        {{0xC6, 2, 0x0B}, "BL31_EC_FDT_BDF_RANGE_NODES_INVALID"},
+        {{0xC6, 2, 0x0C}, "BL31_EC_FDT_CXL_T3_MEM_NODES_INVALID"},
+        {{0xC6, 2, 0x0D}, "BL31_EC_FDT_CXL_CHBCR_REGS_NODES_INVALID"},
+        {{0xC6, 2, 0x0E}, "BL31_EC_FDT_COH_DEV_MEM_NODES_INVALID"},
+        {{0xC6, 2, 0x0F}, "BL31_EC_FDT_PCIE_NC_DEV_MEM_NODES_INVALID"},
+        {{0xC6, 2, 0x10}, "BL31_EC_FDT_SMMU_NODES_INVALID"},
         {{0xC9, 2, 0x00}, "UEFI_EC_NO_SMBIOS_TABLE"},
         {{0xC9, 2, 0x01}, "UEFI_EC_SMBIOS_TRANSFER_FAILED"},
         {{0xC9, 2, 0x02}, "UEFI_EC_M2_NOT_DETECTED"},
@@ -217,17 +329,66 @@ static const std::vector<SipOpEntry> sipOperationNames = []() {
         {{0xC9, 2, 0x16}, "UEFI_EC_TPM_CLEAR_FAILED"},
         {{0xC9, 2, 0x17}, "UEFI_EC_SECURE_BOOT_FAILED"},
         {{0xC9, 2, 0x18}, "UEFI_EC_C2C_INIT_FAILED"},
-        {{0xD4, 2, 0x01}, "NVLINK_C2C0_EC_TRAINING_FAILED"},
-        {{0xD5, 2, 0x01}, "NVLINK_C2C1_EC_TRAINING_FAILED"},
-        {{0xD6, 2, 0x01}, "NVCLINK0_EC_TRAINING_FAILED"},
-        {{0xD7, 2, 0x01}, "NVCLINK1_EC_TRAINING_FAILED"},
-        {{0xD8, 2, 0x01}, "NVCLINK2_EC_TRAINING_FAILED"},
-        {{0xD9, 2, 0x01}, "NVCLINK3_EC_TRAINING_FAILED"},
-        {{0xDA, 2, 0x01}, "NVCLINK4_EC_TRAINING_FAILED"},
-        {{0xDC, 2, 0x01}, "NVDLINK_S0_EC_TRAINING_FAILED"},
-        {{0xDD, 2, 0x01}, "NVDLINK_S1_EC_TRAINING_FAILED"},
-        {{0xDE, 2, 0x01}, "NVDLINK_C0_EC_TRAINING_FAILED"},
-        {{0xDF, 2, 0x01}, "NVDLINK_C1_EC_TRAINING_FAILED"},
+        {{0xCB, 1, 0x01}, "OOBHUB_PC_INIT"},
+        {{0xCB, 1, 0x03}, "OOBHUB_PC_MCTP_INIT"},
+        {{0xCC, 1, 0x00}, "RAS_FW_PC_MGMT_INIT"},
+        {{0xCC, 1, 0x01}, "RAS_FW_PC_MGMT_READY"},
+        {{0xCC, 1, 0x02}, "RAS_FW_PC_COMPUTE_DIE_READY"},
+        {{0xCC, 1, 0x03}, "RAS_FW_PC_ATF_READY"},
+        {{0xCC, 1, 0x04}, "RAS_FW_PC_APEI_DONE"},
+        {{0xCD, 1, 0x01}, "MSEQ_FW_PC_INIT"},
+        {{0xCD, 1, 0x02}, "MSEQ_FW_PC_MSEQS_BOOTSTRAP"},
+        {{0xCD, 1, 0x03}, "MSEQ_FW_PC_BOOT_COMPLETE"},
+        {{0xCE, 1, 0x01}, "PCORE0_FW_PC_INIT"},
+        {{0xCE, 1, 0x02}, "PCORE0_FW_PC_UPHY_INIT"},
+        {{0xCE, 2, 0x01}, "PCORE0_FW_EC_UPHY_INIT_FAILED"},
+        {{0xCF, 1, 0x01}, "PCORE1_FW_PC_INIT"},
+        {{0xCF, 1, 0x02}, "PCORE1_FW_PC_UPHY_INIT"},
+        {{0xCF, 2, 0x01}, "PCORE1_FW_EC_UPHY_INIT_FAILED"},
+        {{0xD0, 1, 0x01}, "PCORE2_FW_PC_INIT"},
+        {{0xD0, 1, 0x02}, "PCORE2_FW_PC_UPHY_INIT"},
+        {{0xD0, 2, 0x01}, "PCORE2_FW_EC_UPHY_INIT_FAILED"},
+        {{0xD1, 1, 0x01}, "PCORE3_FW_PC_INIT"},
+        {{0xD1, 1, 0x02}, "PCORE3_FW_PC_UPHY_INIT"},
+        {{0xD1, 2, 0x01}, "PCORE3_FW_EC_UPHY_INIT_FAILED"},
+        {{0xD2, 1, 0x01}, "PCORE4_FW_PC_INIT"},
+        {{0xD2, 1, 0x02}, "PCORE4_FW_PC_UPHY_INIT"},
+        {{0xD2, 2, 0x01}, "PCORE4_FW_EC_UPHY_INIT_FAILED"},
+        {{0xD3, 1, 0x01}, "PCORE5_FW_PC_INIT"},
+        {{0xD3, 1, 0x02}, "PCORE5_FW_PC_UPHY_INIT"},
+        {{0xD3, 2, 0x01}, "PCORE5_FW_EC_UPHY_INIT_FAILED"},
+        {{0xD4, 1, 0x01}, "C2C_GRS0_PC_INIT"},
+        {{0xD4, 1, 0x02}, "C2C_GRS0_PC_TRAINING"},
+        {{0xD4, 2, 0x01}, "C2C_GRS0_EC_TRAINING_FAILED"},
+        {{0xD5, 1, 0x01}, "C2C_GRS1_PC_INIT"},
+        {{0xD5, 1, 0x02}, "C2C_GRS1_PC_TRAINING"},
+        {{0xD5, 2, 0x01}, "C2C_GRS1_EC_TRAINING_FAILED"},
+        {{0xD6, 1, 0x01}, "C2C_UPHY0_PC_INIT"},
+        {{0xD6, 1, 0x02}, "C2C_UPHY0_PC_TRAINING"},
+        {{0xD6, 2, 0x01}, "C2C_UPHY0_EC_TRAINING_FAILED"},
+        {{0xD7, 1, 0x01}, "C2C_UPHY1_PC_INIT"},
+        {{0xD7, 1, 0x02}, "C2C_UPHY1_PC_TRAINING"},
+        {{0xD7, 2, 0x01}, "C2C_UPHY1_EC_TRAINING_FAILED"},
+        {{0xD8, 1, 0x01}, "C2C_UPHY2_PC_INIT"},
+        {{0xD8, 1, 0x02}, "C2C_UPHY2_PC_TRAINING"},
+        {{0xD8, 2, 0x01}, "C2C_UPHY2_EC_TRAINING_FAILED"},
+        {{0xD9, 1, 0x01}, "C2C_UPHY3_PC_INIT"},
+        {{0xD9, 1, 0x02}, "C2C_UPHY3_PC_TRAINING"},
+        {{0xD9, 2, 0x01}, "C2C_UPHY3_EC_TRAINING_FAILED"},
+        {{0xDA, 1, 0x01}, "C2C_UPHY4_PC_INIT"},
+        {{0xDA, 1, 0x02}, "C2C_UPHY4_PC_TRAINING"},
+        {{0xDA, 2, 0x01}, "C2C_UPHY4_EC_TRAINING_FAILED"},
+        {{0xDB, 1, 0x01}, "C2C_UPHY5_PC_INIT"},
+        {{0xDB, 1, 0x02}, "C2C_UPHY5_PC_TRAINING"},
+        {{0xDB, 2, 0x01}, "C2C_UPHY5_EC_TRAINING_FAILED"},
+        {{0xDC, 1, 0x01}, "C2C_LPI_S0_PC_INIT"},
+        {{0xDC, 2, 0x01}, "C2C_LPI_S0_EC_TRAINING_FAILED"},
+        {{0xDD, 1, 0x01}, "C2C_LPI_S1_PC_INIT"},
+        {{0xDD, 2, 0x01}, "C2C_LPI_S1_EC_TRAINING_FAILED"},
+        {{0xDE, 1, 0x01}, "C2C_LPI_C0_PC_INIT"},
+        {{0xDE, 2, 0x01}, "C2C_LPI_C0_EC_TRAINING_FAILED"},
+        {{0xDF, 1, 0x01}, "C2C_LPI_C1_PC_INIT"},
+        {{0xDF, 2, 0x01}, "C2C_LPI_C1_EC_TRAINING_FAILED"},
     };
     std::sort(v.begin(), v.end());
     return v;
@@ -409,13 +570,13 @@ static const std::vector<InstanceEntry> sipInstanceNames = []() {
     append("PSC_ROM_EC_FMC_IMAGE_VOL_DOT_SVN_CSH_RATCHET_FAIL", fmcSections);
     append("PSC_ROM_EC_FMC_IMAGE_VOL_DOT_CSH_RATCHET_FAIL", fmcSections);
 
-    append("PSC_FMC_PC_NVDLINK_LS_LINK_UP", fmcResetInstances);
+    append("PSC_FMC_PC_LPI_LS_LINK_UP", fmcResetInstances);
     append("PSC_FMC_EC_DEBUG_TOKEN_SANITY_FAIL", debugTokenInstances);
     append("PSC_FMC_EC_DEBUG_TOKEN_AUTHENTICATION_FAIL", debugTokenInstances);
 
     append("PSC_FMC_EC_SANITY_FAILED", binaryInstances);
     append("PSC_FMC_EC_STAGE2_AUTHENTICATION_FAILED", binaryInstances);
-    append("PSC_FMC_SVN_CHECK_FAILED", binaryInstances);
+    append("PSC_FMC_EC_SVN_CHECK_FAILED", binaryInstances);
 
     static constexpr std::array<InstData, 3> fuseCrcInst = {{
         {0x00, "SYSTEM Dielet"},
@@ -471,6 +632,224 @@ static const std::vector<InstanceEntry> sipInstanceNames = []() {
     }};
     append("MB1_EC_CARVEOUT_ALLOC_FAILED", carveoutInst2);
 
+    static constexpr std::array<InstData, 4> bootModeInst = {{
+        {0x01, "COLD_BOOT"},
+        {0x02, "RECOVERY"},
+        {0x03, "IST"},
+        {0x04, "DIAG_BOOT"},
+    }};
+    append("PSC_FMC_PC_BOOT_MODE", bootModeInst);
+
+    static constexpr std::array<InstData, 14> fmcBootstrapInst = {{
+        {0x00, "CALIPTRA_FW"},
+        {0x01, "OOBHUB"},
+        {0x02, "RAS"},
+        {0x03, "MB1"},
+        {0x04, "MSEQ"},
+        {0x05, "SEGMENT_CTRL_FW_0"},
+        {0x06, "SEGMENT_CTRL_FW_1"},
+        {0x07, "SEGMENT_CTRL_FW_2"},
+        {0x08, "SEGMENT_CTRL_FW_3"},
+        {0x09, "SEGMENT_CTRL_FW_4"},
+        {0x0A, "SEGMENT_CTRL_FW_5"},
+        {0x0B, "MB2"},
+        {0x0C, "BPMP_FW"},
+        {0x0D, "BOOT_BPMP_IST"},
+    }};
+    append("PSC_FMC_PC_BOOTSTRAP", fmcBootstrapInst);
+
+    static constexpr std::array<InstData, 1> fmcInitInst = {{
+        {0x00, "QUEUE_SIZES_1"},
+    }};
+    append("PSC_FMC_PC_INIT", fmcInitInst);
+
+    append("PSC_FMC_PC_DEBUG_TOKEN_LOAD", debugTokenInstances);
+
+    static constexpr std::array<InstData, 4> dotCakInst = {{
+        {0x00, "CAK_INSTALLED"},
+        {0x01, "CAK_SKIPPED"},
+        {0x02, "BMC_WAIT"},
+        {0x03, "WAIT_RESET"},
+    }};
+    append("PSC_FMC_PC_WAIT_FOR_DOT_CAK_STATUS", dotCakInst);
+
+    static constexpr std::array<InstData, 2> csaFailInst = {{
+        {0x00, "CSA_FAIL_CHAIN_MISMATCH"},
+        {0x01, "CSA_FAIL_HASH_MISMATCH"},
+    }};
+    append("PSC_FMC_EC_CSA_FAILED", csaFailInst);
+
+    append("PSC_FMC_PC_BINARY_LOAD", binaryInstances);
+    append("PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED", binaryInstances);
+
+    static constexpr std::array<InstData, 4> mb1BootstrapInst = {{
+        {0x00, "NVDLINK_C0"},
+        {0x01, "NVDLINK_C1"},
+        {0x02, "NVDLINK_S0"},
+        {0x03, "NVDLINK_S1"},
+    }};
+    append("MB1_PC_BOOTSTRAP", mb1BootstrapInst);
+
+    static constexpr std::array<InstData, 3> cswpConfigInst = {{
+        {0x00, "DISABLED"},
+        {0x01, "ENABLED_ON_USB2"},
+        {0x02, "ENABLED_ON_USB3"},
+    }};
+    append("MB1_PC_CSWP_CONFIG", cswpConfigInst);
+
+    static constexpr std::array<InstData, 3> mb2BreakpointInst = {{
+        {0x00, "ATF"},
+        {0x01, "HAFNIUM"},
+        {0x02, "UEFI"},
+    }};
+    append("MB2_PC_SET_HW_BREAK_POINT", mb2BreakpointInst);
+
+    std::sort(v.begin(), v.end());
+    return v;
+}();
+
+using PiSubKey = std::pair<uint8_t, uint8_t>;
+using PiSubEntry = std::pair<PiSubKey, std::string_view>;
+static const std::vector<PiSubEntry> piSubclassNames = []() {
+    std::vector<PiSubEntry> v = {
+        {{0x00, 0x00}, "EFI_COMPUTING_UNIT_UNSPECIFIED"},
+        {{0x00, 0x01}, "EFI_COMPUTING_UNIT_HOST_PROCESSOR"},
+        {{0x00, 0x02}, "EFI_COMPUTING_UNIT_FIRMWARE_PROCESSOR"},
+        {{0x00, 0x03}, "EFI_COMPUTING_UNIT_IO_PROCESSOR"},
+        {{0x00, 0x04}, "EFI_COMPUTING_UNIT_CACHE"},
+        {{0x00, 0x05}, "EFI_COMPUTING_UNIT_MEMORY"},
+        {{0x00, 0x06}, "EFI_COMPUTING_UNIT_CHIPSET"},
+        {{0x00, 0x07}, "EFI_COMPUTING_UNIT_MANAGEABILITY"},
+        {{0x01, 0x00}, "EFI_PERIPHERAL_UNSPECIFIED"},
+        {{0x01, 0x01}, "EFI_PERIPHERAL_KEYBOARD"},
+        {{0x01, 0x02}, "EFI_PERIPHERAL_MOUSE"},
+        {{0x01, 0x03}, "EFI_PERIPHERAL_LOCAL_CONSOLE"},
+        {{0x01, 0x04}, "EFI_PERIPHERAL_REMOTE_CONSOLE"},
+        {{0x01, 0x05}, "EFI_PERIPHERAL_SERIAL_PORT"},
+        {{0x01, 0x06}, "EFI_PERIPHERAL_PARALLEL_PORT"},
+        {{0x01, 0x07}, "EFI_PERIPHERAL_FIXED_MEDIA"},
+        {{0x01, 0x08}, "EFI_PERIPHERAL_REMOVABLE_MEDIA"},
+        {{0x01, 0x09}, "EFI_PERIPHERAL_AUDIO_INPUT"},
+        {{0x01, 0x0A}, "EFI_PERIPHERAL_AUDIO_OUTPUT"},
+        {{0x01, 0x0B}, "EFI_PERIPHERAL_LCD_DEVICE"},
+        {{0x01, 0x0C}, "EFI_PERIPHERAL_NETWORK"},
+        {{0x01, 0x0D}, "EFI_PERIPHERAL_DOCKING"},
+        {{0x01, 0x0E}, "EFI_PERIPHERAL_TPM"},
+        {{0x02, 0x00}, "EFI_IO_BUS_UNSPECIFIED"},
+        {{0x02, 0x01}, "EFI_IO_BUS_PCI"},
+        {{0x02, 0x02}, "EFI_IO_BUS_USB"},
+        {{0x02, 0x03}, "EFI_IO_BUS_IBA"},
+        {{0x02, 0x04}, "EFI_IO_BUS_AGP"},
+        {{0x02, 0x05}, "EFI_IO_BUS_PC_CARD"},
+        {{0x02, 0x06}, "EFI_IO_BUS_LPC"},
+        {{0x02, 0x07}, "EFI_IO_BUS_SCSI"},
+        {{0x02, 0x08}, "EFI_IO_BUS_ATA_ATAPI"},
+        {{0x02, 0x09}, "EFI_IO_BUS_FC"},
+        {{0x02, 0x0A}, "EFI_IO_BUS_IP_NETWORK"},
+        {{0x02, 0x0B}, "EFI_IO_BUS_SMBUS"},
+        {{0x02, 0x0C}, "EFI_IO_BUS_I2C"},
+        {{0x03, 0x00}, "EFI_SOFTWARE_UNSPECIFIED"},
+        {{0x03, 0x01}, "EFI_SOFTWARE_SEC"},
+        {{0x03, 0x02}, "EFI_SOFTWARE_PEI_CORE"},
+        {{0x03, 0x03}, "EFI_SOFTWARE_PEI_MODULE"},
+        {{0x03, 0x04}, "EFI_SOFTWARE_DXE_CORE"},
+        {{0x03, 0x05}, "EFI_SOFTWARE_DXE_BS_DRIVER"},
+        {{0x03, 0x06}, "EFI_SOFTWARE_DXE_RT_DRIVER"},
+        {{0x03, 0x07}, "EFI_SOFTWARE_SMM_DRIVER"},
+        {{0x03, 0x08}, "EFI_SOFTWARE_EFI_APPLICATION"},
+        {{0x03, 0x09}, "EFI_SOFTWARE_EFI_OS_LOADER"},
+        {{0x03, 0x0A}, "EFI_SOFTWARE_RT"},
+        {{0x03, 0x0B}, "EFI_SOFTWARE_AL"},
+        {{0x03, 0x0C}, "EFI_SOFTWARE_EBC_EXCEPTION"},
+        {{0x03, 0x0D}, "EFI_SOFTWARE_IA32_EXCEPTION"},
+        {{0x03, 0x0E}, "EFI_SOFTWARE_IPF_EXCEPTION"},
+        {{0x03, 0x0F}, "EFI_SOFTWARE_PEI_SERVICE"},
+        {{0x03, 0x10}, "EFI_SOFTWARE_EFI_BOOT_SERVICE"},
+        {{0x03, 0x11}, "EFI_SOFTWARE_EFI_RUNTIME_SERVICE"},
+        {{0x03, 0x12}, "EFI_SOFTWARE_EFI_DXE_SERVICE"},
+        {{0x03, 0x13}, "EFI_SOFTWARE_X64_EXCEPTION"},
+        {{0x03, 0x14}, "EFI_SOFTWARE_ARM_EXCEPTION"},
+    };
+    std::sort(v.begin(), v.end());
+    return v;
+}();
+
+// Shared PI operation codes: key is {classField, statusType, operation}.
+// Operations >= 0x1000 are subclass-specific and not decoded here.
+using PiOpKey = std::tuple<uint8_t, uint8_t, uint16_t>;
+using PiOpEntry = std::pair<PiOpKey, std::string_view>;
+static const std::vector<PiOpEntry> piOperationNames = []() {
+    std::vector<PiOpEntry> v = {
+        {{0x00, 0x01, 0x0000}, "EFI_CU_PC_INIT_BEGIN"},
+        {{0x00, 0x01, 0x0001}, "EFI_CU_PC_INIT_END"},
+        {{0x00, 0x02, 0x0000}, "EFI_CU_EC_NON_SPECIFIC"},
+        {{0x00, 0x02, 0x0001}, "EFI_CU_EC_DISABLED"},
+        {{0x00, 0x02, 0x0002}, "EFI_CU_EC_NOT_SUPPORTED"},
+        {{0x00, 0x02, 0x0003}, "EFI_CU_EC_NOT_DETECTED"},
+        {{0x00, 0x02, 0x0004}, "EFI_CU_EC_NOT_CONFIGURED"},
+        {{0x01, 0x01, 0x0000}, "EFI_P_PC_INIT"},
+        {{0x01, 0x01, 0x0001}, "EFI_P_PC_RESET"},
+        {{0x01, 0x01, 0x0002}, "EFI_P_PC_DISABLE"},
+        {{0x01, 0x01, 0x0003}, "EFI_P_PC_PRESENCE_DETECT"},
+        {{0x01, 0x01, 0x0004}, "EFI_P_PC_ENABLE"},
+        {{0x01, 0x01, 0x0005}, "EFI_P_PC_RECONFIG"},
+        {{0x01, 0x01, 0x0006}, "EFI_P_PC_DETECTED"},
+        {{0x01, 0x01, 0x0007}, "EFI_P_PC_REMOVED"},
+        {{0x01, 0x02, 0x0000}, "EFI_P_EC_NON_SPECIFIC"},
+        {{0x01, 0x02, 0x0001}, "EFI_P_EC_DISABLED"},
+        {{0x01, 0x02, 0x0002}, "EFI_P_EC_NOT_SUPPORTED"},
+        {{0x01, 0x02, 0x0003}, "EFI_P_EC_NOT_DETECTED"},
+        {{0x01, 0x02, 0x0004}, "EFI_P_EC_NOT_CONFIGURED"},
+        {{0x01, 0x02, 0x0005}, "EFI_P_EC_INTERFACE_ERROR"},
+        {{0x01, 0x02, 0x0006}, "EFI_P_EC_CONTROLLER_ERROR"},
+        {{0x01, 0x02, 0x0007}, "EFI_P_EC_INPUT_ERROR"},
+        {{0x01, 0x02, 0x0008}, "EFI_P_EC_OUTPUT_ERROR"},
+        {{0x02, 0x01, 0x0000}, "EFI_IOB_PC_INIT"},
+        {{0x02, 0x01, 0x0001}, "EFI_IOB_PC_RESET"},
+        {{0x02, 0x01, 0x0002}, "EFI_IOB_PC_DISABLE"},
+        {{0x02, 0x01, 0x0003}, "EFI_IOB_PC_DETECT"},
+        {{0x02, 0x01, 0x0004}, "EFI_IOB_PC_ENABLE"},
+        {{0x02, 0x01, 0x0005}, "EFI_IOB_PC_RECONFIG"},
+        {{0x02, 0x01, 0x0006}, "EFI_IOB_PC_HOTPLUG"},
+        {{0x02, 0x02, 0x0000}, "EFI_IOB_EC_NON_SPECIFIC"},
+        {{0x02, 0x02, 0x0001}, "EFI_IOB_EC_DISABLED"},
+        {{0x02, 0x02, 0x0002}, "EFI_IOB_EC_NOT_SUPPORTED"},
+        {{0x02, 0x02, 0x0003}, "EFI_IOB_EC_NOT_DETECTED"},
+        {{0x02, 0x02, 0x0004}, "EFI_IOB_EC_NOT_CONFIGURED"},
+        {{0x02, 0x02, 0x0005}, "EFI_IOB_EC_INTERFACE_ERROR"},
+        {{0x02, 0x02, 0x0006}, "EFI_IOB_EC_CONTROLLER_ERROR"},
+        {{0x02, 0x02, 0x0007}, "EFI_IOB_EC_READ_ERROR"},
+        {{0x02, 0x02, 0x0008}, "EFI_IOB_EC_WRITE_ERROR"},
+        {{0x02, 0x02, 0x0009}, "EFI_IOB_EC_RESOURCE_CONFLICT"},
+        {{0x03, 0x01, 0x0000}, "EFI_SW_PC_LOAD"},
+        {{0x03, 0x01, 0x0001}, "EFI_SW_PC_INIT"},
+        {{0x03, 0x01, 0x0002}, "EFI_SW_PC_EXIT_BS"},
+        {{0x03, 0x01, 0x0003}, "EFI_SW_PC_SHUTDOWN"},
+        {{0x03, 0x01, 0x0004}, "EFI_SW_PC_RESET"},
+        {{0x03, 0x01, 0x0005}, "EFI_SW_PC_OS_BOOT"},
+        {{0x03, 0x01, 0x0006}, "EFI_SW_PC_HANDOFF_TO_NEXT"},
+        {{0x03, 0x02, 0x0000}, "EFI_SW_EC_NON_SPECIFIC"},
+        {{0x03, 0x02, 0x0001}, "EFI_SW_EC_LOAD_ERROR"},
+        {{0x03, 0x02, 0x0002}, "EFI_SW_EC_INVALID_PARAMETER"},
+        {{0x03, 0x02, 0x0003}, "EFI_SW_EC_UNSUPPORTED"},
+        {{0x03, 0x02, 0x0004}, "EFI_SW_EC_INVALID_BUFFER"},
+        {{0x03, 0x02, 0x0005}, "EFI_SW_EC_OUT_OF_RESOURCES"},
+        {{0x03, 0x02, 0x0006}, "EFI_SW_EC_ABORTED"},
+        {{0x03, 0x02, 0x0007}, "EFI_SW_EC_ILLEGAL_SOFTWARE_STATE"},
+        {{0x03, 0x02, 0x0008}, "EFI_SW_EC_ILLEGAL_HARDWARE_STATE"},
+        {{0x03, 0x02, 0x0009}, "EFI_SW_EC_START_ERROR"},
+        {{0x03, 0x02, 0x000A}, "EFI_SW_EC_BAD_DATE_TIME"},
+        {{0x03, 0x02, 0x000B}, "EFI_SW_EC_CFG_INVALID"},
+        {{0x03, 0x02, 0x000C}, "EFI_SW_EC_CFG_CLR_REQUEST"},
+        {{0x03, 0x02, 0x000D}, "EFI_SW_EC_CFG_DEFAULT"},
+        {{0x03, 0x02, 0x000E}, "EFI_SW_EC_PWD_INVALID"},
+        {{0x03, 0x02, 0x000F}, "EFI_SW_EC_PWD_CLR_REQUEST"},
+        {{0x03, 0x02, 0x0010}, "EFI_SW_EC_PWD_CLEARED"},
+        {{0x03, 0x02, 0x0011}, "EFI_SW_EC_EVENT_LOG_FULL"},
+        {{0x03, 0x02, 0x0012}, "EFI_SW_EC_WRITE_PROTECTED"},
+        {{0x03, 0x02, 0x0013}, "EFI_SW_EC_FV_CORRUPTED"},
+        {{0x03, 0x02, 0x0014}, "EFI_SW_EC_INCONSISTENT_MEMORY_MAP"},
+    };
     std::sort(v.begin(), v.end());
     return v;
 }();
@@ -529,8 +908,17 @@ std::string_view getFirmwareName(uint8_t subclass)
     return "Unknown";
 }
 
-static std::string_view getSipSubclassName(uint8_t subclass)
+std::string_view getSubclassName(uint8_t classField, uint8_t subclass)
 {
+    if (classField <= piClassMax)
+    {
+        PiSubKey key{classField, subclass};
+        auto it = std::lower_bound(piSubclassNames.begin(),
+                                   piSubclassNames.end(), key, compareByFirst);
+        return (it != piSubclassNames.end() && it->first == key)
+                   ? it->second
+                   : "Unknown";
+    }
     if (subclass >= efiSubclassSipMin && subclass <= efiSubclassSipMax)
     {
         return sipSubclassNames[subclass - efiSubclassSipMin];
@@ -547,29 +935,37 @@ std::optional<int> getPackageNumber(uint8_t classField)
     return std::nullopt;
 }
 
-static std::optional<std::string_view> getSipOperationName(
-    uint8_t subclass, uint8_t type, uint8_t opcode)
+std::optional<std::string_view> getOperationName(
+    uint8_t classField, uint8_t subclass, uint8_t statusType, uint8_t opcode,
+    uint16_t operation)
 {
-    SipOpKey key{subclass, type, opcode};
-    auto it = std::lower_bound(
-        sipOperationNames.begin(), sipOperationNames.end(), key,
-        [](const SipOpEntry& e, const SipOpKey& k) { return e.first < k; });
-    if (it != sipOperationNames.end() && it->first == key)
+    if (classField <= piClassMax)
     {
-        return it->second;
+        if (operation >= 0x1000)
+        {
+            return std::nullopt;
+        }
+        PiOpKey key{classField, statusType, operation};
+        auto it = std::lower_bound(piOperationNames.begin(),
+                                   piOperationNames.end(), key, compareByFirst);
+        return (it != piOperationNames.end() && it->first == key)
+                   ? std::optional{it->second}
+                   : std::nullopt;
     }
-    return std::nullopt;
+    SipOpKey key{subclass, statusType, opcode};
+    auto it = std::lower_bound(sipOperationNames.begin(),
+                               sipOperationNames.end(), key, compareByFirst);
+    return (it != sipOperationNames.end() && it->first == key)
+               ? std::optional{it->second}
+               : std::nullopt;
 }
 
 static std::optional<std::string_view> getSipInstanceName(
     std::string_view opName, uint8_t instance)
 {
     InstanceKey key{opName, instance};
-    auto it =
-        std::lower_bound(sipInstanceNames.begin(), sipInstanceNames.end(), key,
-                         [](const InstanceEntry& e, const InstanceKey& k) {
-                             return e.first < k;
-                         });
+    auto it = std::lower_bound(sipInstanceNames.begin(), sipInstanceNames.end(),
+                               key, compareByFirst);
     if (it != sipInstanceNames.end() && it->first == key)
     {
         return it->second;
@@ -582,9 +978,8 @@ static std::optional<std::string_view> getSipInstanceName(
 std::optional<std::string_view> findInstanceName(std::span<const InstData> arr,
                                                  uint16_t instance)
 {
-    auto it = std::lower_bound(
-        arr.begin(), arr.end(), instance,
-        [](const InstData& e, uint16_t k) { return e.first < k; });
+    auto it =
+        std::lower_bound(arr.begin(), arr.end(), instance, compareByFirst);
     if (it != arr.end() && it->first == instance)
     {
         return it->second;
@@ -635,9 +1030,12 @@ void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
     uint8_t subclass = extractSubclass(postcodeValue);
     uint8_t opcode = extractOpcode(postcodeValue);
     uint8_t instance = static_cast<uint8_t>(extractInstance(postcodeValue));
+    uint16_t operation = static_cast<uint16_t>(postcodeValue & 0x0000FFFFU);
+    bool isPiCode = classField <= piClassMax;
     auto cpuNum = getPackageNumber(classField);
 
-    auto opName = getSipOperationName(subclass, statusType, opcode);
+    auto opName =
+        getOperationName(classField, subclass, statusType, opcode, operation);
 
     // Progress codes without a known operation name carry no additional
     // context.
@@ -645,6 +1043,8 @@ void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
     {
         return;
     }
+
+    std::string_view componentName = getSubclassName(classField, subclass);
 
     std::string logMsg;
     logMsg.reserve(256);
@@ -665,18 +1065,22 @@ void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
     {
         logMsg += ", ";
     }
-    std::format_to(std::back_inserter(logMsg), "reported by {}",
-                   getSipSubclassName(subclass));
+    std::format_to(std::back_inserter(logMsg), "reported by {}", componentName);
 
     if (opName)
     {
-        if (auto r = getResetReasonName(subclass, statusType, opcode, instance))
+        if (!isPiCode)
         {
-            std::format_to(std::back_inserter(logMsg), ", reset reason {}", *r);
-        }
-        else if (auto i = getSipInstanceName(*opName, instance))
-        {
-            std::format_to(std::back_inserter(logMsg), ", instance {}", *i);
+            if (auto r =
+                    getResetReasonName(subclass, statusType, opcode, instance))
+            {
+                std::format_to(std::back_inserter(logMsg), ", reset reason {}",
+                               *r);
+            }
+            else if (auto i = getSipInstanceName(*opName, instance))
+            {
+                std::format_to(std::back_inserter(logMsg), ", instance {}", *i);
+            }
         }
         std::format_to(std::back_inserter(logMsg), " ({}, Code 0x{:08X}).",
                        *opName, postcodeValue);
@@ -702,8 +1106,7 @@ void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
         additionalData.emplace("NVIDIA_CPU_NUM",
                                cpuNum ? std::to_string(*cpuNum)
                                       : std::string("Unknown"));
-        additionalData.emplace("NVIDIA_FIRMWARE",
-                               std::string(getSipSubclassName(subclass)));
+        additionalData.emplace("NVIDIA_FIRMWARE", std::string(componentName));
         additionalData.emplace("NVIDIA_INSTANCE",
                                std::to_string(static_cast<unsigned>(instance)));
         additionalData.emplace(
