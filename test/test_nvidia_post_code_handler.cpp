@@ -44,6 +44,10 @@ std::optional<std::string_view> getResetReasonName(
 using InstData = std::pair<uint8_t, std::string_view>;
 std::optional<std::string_view> findInstanceName(std::span<const InstData> arr,
                                                  uint16_t instance);
+std::string_view getSubclassName(uint8_t classField, uint8_t subclass);
+std::optional<std::string_view> getOperationName(
+    uint8_t classField, uint8_t subclass, uint8_t statusType, uint8_t opcode,
+    uint16_t operation);
 
 class NvidiaPostCodeHandlerTest : public ::testing::Test
 {
@@ -518,4 +522,702 @@ TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeErrorNoInstanceName)
     std::vector<uint8_t> code = {0xB0, 0xC0, 0xC0, 0x02};
     std::optional<std::string> resolution;
     EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeUnknownSubclassAndCpu)
+{
+    std::vector<uint8_t> code = {0x80, 0x00, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorManageabilityOperationAbove1000)
+{
+    std::vector<uint8_t> code = {0x80, 0x07, 0x10, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeOperationLowerBoundMiss)
+{
+    std::vector<uint8_t> code = {0xB0, 0xC0, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorComputingUnitKnownOperation)
+{
+    std::vector<uint8_t> code = {0x80, 0x07, 0x00, 0x02};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeOperationEndMiss)
+{
+    std::vector<uint8_t> code = {0xB0, 0xDF, 0x00, 0x3F};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorComputingUnitUnknownOperationBelow1000)
+{
+    std::vector<uint8_t> code = {0x80, 0x07, 0x00, 0xFF};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeInstanceEndMiss)
+{
+    std::vector<uint8_t> code = {0xB0, 0xC9, 0x00, 0x16};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorUnknownSubclass)
+{
+    std::vector<uint8_t> code = {0x80, 0xFF, 0x00, 0x02};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeNonStdExceptionPropagates)
+{
+    std::vector<uint8_t> code = {0x80, 0x00, 0x00, 0x00};
+    std::optional<std::string> resolution;
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _)).WillOnce(Throw(7));
+
+    EXPECT_THROW(logNvidiaPostCode(bus, code, resolution), int);
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeCallNoReplyFailureIsCaught)
+{
+    std::vector<uint8_t> code = {0x80, 0x00, 0x00, 0x00};
+    std::optional<std::string> resolution;
+
+    EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _)).WillOnce(Return(-EIO));
+
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+// subclass = 0xE0 is above efiSubclassSipMax (0xDF): getSipSubclassName takes
+// the false branch of (subclass >= min && subclass <= max) and returns
+// "Unknown".
+TEST_F(NvidiaPostCodeHandlerTest, LogNvidiaPostCodeSubclassAboveSipMax)
+{
+    std::vector<uint8_t> code = {0x80, 0xE0, 0x00, 0x01};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorPeripheralKnownOperation)
+{
+    std::vector<uint8_t> code = {0x81, 0x07, 0x00, 0x02};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorIoBusKnownOperation)
+{
+    std::vector<uint8_t> code = {0x82, 0x01, 0x00, 0x01};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorSoftwareKnownOperation)
+{
+    std::vector<uint8_t> code = {0x83, 0x04, 0x00, 0x01};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressComputingUnitInitBegin)
+{
+    std::vector<uint8_t> code = {0x40, 0x00, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressComputingUnitInitEnd)
+{
+    std::vector<uint8_t> code = {0x40, 0x00, 0x00, 0x01};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressUnknownOperationReturnEarly)
+{
+    std::vector<uint8_t> code = {0x40, 0x00, 0x10, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressIoBusInit)
+{
+    std::vector<uint8_t> code = {0x42, 0x01, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressSoftwareInit)
+{
+    std::vector<uint8_t> code = {0x43, 0x01, 0x00, 0x01};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorWithDescription)
+{
+    std::vector<uint8_t> code = {0x80, 0x07, 0x10, 0x00};
+    std::optional<std::string> resolution = "Check manageability firmware";
+    std::optional<std::string> description = "Manageability unit error";
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution, description));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorPeripheralSubclassMin)
+{
+    std::vector<uint8_t> code = {0x81, 0x00, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorPeripheralSubclassMax)
+{
+    std::vector<uint8_t> code = {0x81, 0x0E, 0x00, 0x00};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorSoftwareSubclassMaxKnownOp)
+{
+    std::vector<uint8_t> code = {0x83, 0x12, 0x00, 0x0D};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorIoBusSubclassMaxKnownOp)
+{
+    std::vector<uint8_t> code = {0x82, 0x0C, 0x00, 0x06};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiErrorOperationBelowThresholdNotInTable)
+{
+    std::vector<uint8_t> code = {0x80, 0x00, 0x00, 0xFF};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressOperationBelowThresholdNotInTable)
+{
+    std::vector<uint8_t> code = {0x40, 0x00, 0x00, 0x02};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, PiProgressPeripheralKnownOperation)
+{
+    std::vector<uint8_t> code = {0x41, 0x00, 0x00, 0x02};
+    std::optional<std::string> resolution;
+    EXPECT_NO_THROW(logNvidiaPostCode(bus, code, resolution));
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitUnspecified)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x00), "EFI_COMPUTING_UNIT_UNSPECIFIED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitManageability)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x07), "EFI_COMPUTING_UNIT_MANAGEABILITY");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitUnknown)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x08), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiPeripheralFixedMedia)
+{
+    EXPECT_EQ(getSubclassName(0x01, 0x07), "EFI_PERIPHERAL_FIXED_MEDIA");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiPeripheralUnknown)
+{
+    EXPECT_EQ(getSubclassName(0x01, 0x0F), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiIoBusPci)
+{
+    EXPECT_EQ(getSubclassName(0x02, 0x01), "EFI_IO_BUS_PCI");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiIoBusI2c)
+{
+    EXPECT_EQ(getSubclassName(0x02, 0x0C), "EFI_IO_BUS_I2C");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiSoftwareDxeCore)
+{
+    EXPECT_EQ(getSubclassName(0x03, 0x04), "EFI_SOFTWARE_DXE_CORE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiSoftwareUnknown)
+{
+    EXPECT_EQ(getSubclassName(0x03, 0x15), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipPscrom)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xC0), "PSCROM");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipPscfmc)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xC1), "PSCFMC");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipSubclassBelowRange)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xBF), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipSubclassAboveRange)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xE0), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameAbovePiMaxNotSip)
+{
+    EXPECT_EQ(getSubclassName(0x04, 0x00), "Unknown");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiProgressInitBegin)
+{
+    auto result = getOperationName(0x00, 0x00, 0x01, 0x00, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_CU_PC_INIT_BEGIN");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiProgressInitEnd)
+{
+    auto result = getOperationName(0x00, 0x00, 0x01, 0x00, 0x0001);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_CU_PC_INIT_END");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiErrorKnown)
+{
+    auto result = getOperationName(0x00, 0x07, 0x02, 0x00, 0x0002);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_CU_EC_NOT_SUPPORTED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiAboveThreshold)
+{
+    auto result = getOperationName(0x00, 0x07, 0x02, 0x00, 0x1000);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiBelowThresholdNotInTable)
+{
+    auto result = getOperationName(0x00, 0x07, 0x02, 0x00, 0x00FF);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressEnable)
+{
+    auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0004);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_PC_ENABLE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorNotConfigured)
+{
+    auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0004);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_IOB_EC_NOT_CONFIGURED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiSoftwareProgressHandoff)
+{
+    auto result = getOperationName(0x03, 0x00, 0x01, 0x00, 0x0006);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_SW_PC_HANDOFF_TO_NEXT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipKnown)
+{
+    auto result = getOperationName(0x30, 0xC0, 0x02, 0x01, 0xC001);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_ROM_EC_I2C_EXT_MSG_FAIL");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipUnknownOpcode)
+{
+    auto result = getOperationName(0x30, 0xC0, 0x02, 0x00, 0xC000);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIteratorReachesEnd)
+{
+    auto result = getOperationName(0x03, 0x00, 0x02, 0x00, 0x0015);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipIteratorReachesEnd)
+{
+    // opcode=0x02 is past the last SiP table entry {0xDF,2,0x01}
+    auto result = getOperationName(0x30, 0xDF, 0x02, 0x02, 0x0000);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipSubclassMaxEntry)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xDF), "C2C_LPI_C1");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest,
+       GetSubclassNameBetweenPiAndSipClassWithSipSubclass)
+{
+    // classField=0x10 is above piClassMax but below efiClassSipMin;
+    // subclass=0xC0 falls in SiP subclass range so sipSubclassNames is used
+    EXPECT_EQ(getSubclassName(0x10, 0xC0), "PSCROM");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitHostProcessor)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x01), "EFI_COMPUTING_UNIT_HOST_PROCESSOR");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitCache)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x04), "EFI_COMPUTING_UNIT_CACHE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiComputingUnitChipset)
+{
+    EXPECT_EQ(getSubclassName(0x00, 0x06), "EFI_COMPUTING_UNIT_CHIPSET");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiPeripheralDocking)
+{
+    EXPECT_EQ(getSubclassName(0x01, 0x0D), "EFI_PERIPHERAL_DOCKING");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiSoftwareX64Exception)
+{
+    EXPECT_EQ(getSubclassName(0x03, 0x13), "EFI_SOFTWARE_X64_EXCEPTION");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNamePiSoftwareArmException)
+{
+    EXPECT_EQ(getSubclassName(0x03, 0x14), "EFI_SOFTWARE_ARM_EXCEPTION");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressDisable)
+{
+    auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0002);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_PC_DISABLE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressReconfig)
+{
+    auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0005);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_PC_RECONFIG");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressRemoved)
+{
+    auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0007);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_PC_REMOVED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorNonSpecific)
+{
+    auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_EC_NON_SPECIFIC");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorDisabled)
+{
+    auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0001);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_EC_DISABLED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorOutputError)
+{
+    auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0008);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_P_EC_OUTPUT_ERROR");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusProgressHotplug)
+{
+    auto result = getOperationName(0x02, 0x00, 0x01, 0x00, 0x0006);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_IOB_PC_HOTPLUG");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorDisabled)
+{
+    auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0001);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_IOB_EC_DISABLED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorReadError)
+{
+    auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0007);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_IOB_EC_READ_ERROR");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorResourceConflict)
+{
+    auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0009);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_IOB_EC_RESOURCE_CONFLICT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiSoftwareErrorFvCorrupted)
+{
+    auto result = getOperationName(0x03, 0x00, 0x02, 0x00, 0x0013);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_SW_EC_FV_CORRUPTED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest,
+       GetOperationNamePiSoftwareErrorInconsistentMemoryMap)
+{
+    auto result = getOperationName(0x03, 0x00, 0x02, 0x00, 0x0014);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "EFI_SW_EC_INCONSISTENT_MEMORY_MAP");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipBpmpFw)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xC4), "BPMP_FW");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipMb2)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xC5), "MB2");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipAtfBl31)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xC6), "ATF_BL31");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipOobhubFw)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xCB), "OOBHUB_FW");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipRasFw)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xCC), "RAS_FW");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipMseqFw)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xCD), "MSEQ_FW");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipPcore0Fw)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xCE), "PCORE0_FW");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipC2cUphy5)
+{
+    EXPECT_EQ(getSubclassName(0x30, 0xDB), "C2C_UPHY5");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRomBootModeSel)
+{
+    auto result = getOperationName(0x30, 0xC0, 0x01, 0x02, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_ROM_PC_BOOT_MODE_SEL_DONE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRomRomExit)
+{
+    auto result = getOperationName(0x30, 0xC0, 0x01, 0x0B, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_ROM_PC_ROM_EXIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcInit)
+{
+    auto result = getOperationName(0x30, 0xC1, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_FMC_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcBootstrap)
+{
+    auto result = getOperationName(0x30, 0xC1, 0x01, 0x09, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_FMC_PC_BOOTSTRAP");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcStage1AuthFailed)
+{
+    auto result = getOperationName(0x30, 0xC1, 0x02, 0x09, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcMemFuseCrcFailed)
+{
+    auto result = getOperationName(0x30, 0xC1, 0x02, 0x0D, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_FMC_EC_MEM_FUSE_CRC_FAILED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRtInit)
+{
+    auto result = getOperationName(0x30, 0xC2, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PSC_RT_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1Init)
+{
+    auto result = getOperationName(0x30, 0xC3, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MB1_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1Exit)
+{
+    auto result = getOperationName(0x30, 0xC3, 0x01, 0x12, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MB1_PC_EXIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1FuseIntegrityFailed)
+{
+    auto result = getOperationName(0x30, 0xC3, 0x02, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MB1_EC_FUSE_RECORD_INTEGRITY_FAILED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1UcfError)
+{
+    auto result = getOperationName(0x30, 0xC3, 0x02, 0x19, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MB1_EC_UCF_ERROR");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBpmpFwInitComplete)
+{
+    auto result = getOperationName(0x30, 0xC4, 0x01, 0x3F, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "BPMP_FW_PC_INIT_COMPLETE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb2SetHwBreakpoint)
+{
+    auto result = getOperationName(0x30, 0xC5, 0x01, 0x03, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MB2_PC_SET_HW_BREAK_POINT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBl31BootComplete)
+{
+    auto result = getOperationName(0x30, 0xC6, 0x01, 0x07, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "BL31_PC_BOOT_COMPLETE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBl31PscMailboxUnavail)
+{
+    auto result = getOperationName(0x30, 0xC6, 0x02, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "BL31_EC_PSC_MAILBOX_UNAVAIL");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipOobhubMctpInit)
+{
+    auto result = getOperationName(0x30, 0xCB, 0x01, 0x03, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "OOBHUB_PC_MCTP_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipRasFwMgmtReady)
+{
+    auto result = getOperationName(0x30, 0xCC, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "RAS_FW_PC_MGMT_READY");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMseqFwBootComplete)
+{
+    auto result = getOperationName(0x30, 0xCD, 0x01, 0x03, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "MSEQ_FW_PC_BOOT_COMPLETE");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPcore0FwInit)
+{
+    auto result = getOperationName(0x30, 0xCE, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PCORE0_FW_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPcore0FwUphyInitFailed)
+{
+    auto result = getOperationName(0x30, 0xCE, 0x02, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "PCORE0_FW_EC_UPHY_INIT_FAILED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cGrs0PcInit)
+{
+    auto result = getOperationName(0x30, 0xD4, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_GRS0_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cGrs0PcTraining)
+{
+    auto result = getOperationName(0x30, 0xD4, 0x01, 0x02, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_GRS0_PC_TRAINING");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy0PcTraining)
+{
+    auto result = getOperationName(0x30, 0xD6, 0x01, 0x02, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_UPHY0_PC_TRAINING");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy5PcInit)
+{
+    auto result = getOperationName(0x30, 0xDB, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_UPHY5_PC_INIT");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy5EcTrainingFailed)
+{
+    auto result = getOperationName(0x30, 0xDB, 0x02, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_UPHY5_EC_TRAINING_FAILED");
+}
+
+TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cLpiS0PcInit)
+{
+    auto result = getOperationName(0x30, 0xDC, 0x01, 0x01, 0x0000);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "C2C_LPI_S0_PC_INIT");
 }
