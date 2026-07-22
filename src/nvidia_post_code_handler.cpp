@@ -1100,7 +1100,7 @@ void logNvidiaPostCode(sdbusplus::bus_t& bus, const std::vector<uint8_t>& code,
     if (statusType == statusTypeError)
     {
         additionalData.emplace("REDFISH_MESSAGE_ID",
-                               "Platform.1.0.1.PlatformError");
+                               "Platform.1.0.PlatformError");
         additionalData.emplace("NVIDIA_POST_CODE",
                                std::format("0x{:08X}", postcodeValue));
         additionalData.emplace("NVIDIA_CPU_NUM",
