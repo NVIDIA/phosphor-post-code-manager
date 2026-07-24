@@ -101,7 +101,7 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
              int nodeIndex, PostCodeHandlers& handlers,
              const std::string& postCodeListPathPrefix =
                  "/var/lib/logging/phosphor-post-code-manager/host") :
-        sdbusplus::server::object_t<post_code, delete_all>(bus, path), bus(bus),
+        sdbusplus::server::object_t<post_code, delete_all>(bus, path),
         event(event), node(nodeIndex),
         postCodeListPath(postCodeListPathPrefix + std::to_string(node)),
         propertiesChangedSignalRaw(
@@ -209,7 +209,6 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     uint16_t getBootNum(const uint16_t index) const;
 
     std::unique_ptr<sdbusplus::Timer> timer;
-    sdbusplus::bus_t& bus;
     EventPtr& event;
     int node;
     std::chrono::time_point<std::chrono::steady_clock> firstPostCodeTimeSteady;

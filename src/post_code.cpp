@@ -51,11 +51,12 @@ const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
         if (handler.mask && handler.mask->size() == handler.primary.size() &&
             handler.mask->size() == primaryCode.size())
         {
+            const auto& mask = handler.mask.value();
             primaryMatches = true;
             for (size_t i = 0; i < primaryCode.size(); ++i)
             {
-                uint8_t maskedCode = primaryCode[i] & (*handler.mask)[i];
-                uint8_t maskedPrimary = handler.primary[i] & (*handler.mask)[i];
+                uint8_t maskedCode = primaryCode[i] & mask[i];
+                uint8_t maskedPrimary = handler.primary[i] & mask[i];
                 if (maskedCode != maskedPrimary)
                 {
                     primaryMatches = false;
@@ -74,7 +75,7 @@ const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
 
         // Check secondary code if primary matches
         if (primaryMatches &&
-            (!handler.secondary || *handler.secondary == secondaryCode))
+            (!handler.secondary || handler.secondary == secondaryCode))
         {
             return &handler;
         }
@@ -125,7 +126,7 @@ std::vector<uint8_t> decodeHexString(const std::string& hex)
     for (size_t i = 2; i < hex.size(); i += 2)
     {
         std::string byteString = hex.substr(i, 2);
-        uint8_t byte = (uint8_t)std::strtol(byteString.c_str(), NULL, 16);
+        uint8_t byte = (uint8_t)std::strtol(byteString.c_str(), nullptr, 16);
         out.push_back(byte);
     }
     return out;
@@ -353,7 +354,7 @@ void PostCode::savePostCodes(postcode_t code)
             "REDFISH_MESSAGE_ARGS=%d,%s,%s", currentBootCycleIndex,
             timeOffsetStr.str().c_str(), hexCode.str().c_str()));
 #endif
-    postCodeHandlers.handle(bus, code);
+    postCodeHandlers.handle(post_code::get_bus(), code);
 
     return;
 }

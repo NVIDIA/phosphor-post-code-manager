@@ -527,7 +527,10 @@ TEST_F(PostCodeHandlersTest, HandlerWithAllOptionalsSet)
     const PostCodeHandler* found = handlers.findWithMask(code);
     EXPECT_NE(found, nullptr);
     EXPECT_TRUE(found->secondary.has_value());
-    EXPECT_EQ(*found->secondary, secondary);
+    if (found->secondary)
+    {
+        EXPECT_EQ(*found->secondary, secondary);
+    }
     EXPECT_TRUE(found->event.has_value());
     EXPECT_TRUE(found->resolution.has_value());
 
@@ -662,7 +665,11 @@ TEST_F(PostCodeHandlersTest, FindExactMatchWithSecondary)
 
     const PostCodeHandler* result = handlers.find(code);
     EXPECT_NE(result, nullptr);
-    EXPECT_EQ(result->secondary->at(0), 0x03);
+    ASSERT_TRUE(result->secondary.has_value());
+    if (result->secondary)
+    {
+        EXPECT_EQ(result->secondary->at(0), 0x03);
+    }
 }
 
 TEST_F(PostCodeHandlersTest, FindNoMatchPrimarySameSecondaryDiffers)

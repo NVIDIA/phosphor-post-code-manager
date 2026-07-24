@@ -135,21 +135,30 @@ TEST_F(NvidiaPostCodeHandlerTest, GetPackageNumberSipMin)
 {
     auto result = getPackageNumber(0x30);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, 0);
+    if (result)
+    {
+        EXPECT_EQ(*result, 0);
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetPackageNumberSipPackage1)
 {
     auto result = getPackageNumber(0x31);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, 1);
+    if (result)
+    {
+        EXPECT_EQ(*result, 1);
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetPackageNumberSipMax)
 {
     auto result = getPackageNumber(0x37);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, 7);
+    if (result)
+    {
+        EXPECT_EQ(*result, 7);
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetPackageNumberInvalid)
@@ -162,28 +171,40 @@ TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomI2cMsgInitFirst)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x01, 0x00);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SYS_RESET_N");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SYS_RESET_N");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomI2cMsgInitBpmpWdt)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x01, 0x1E);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "BPMP_WDT_POR");
+    if (result)
+    {
+        EXPECT_EQ(*result, "BPMP_WDT_POR");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomI2cMsgInitLast)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x01, 0x37);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SC7");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SC7");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomUsbMsgInit)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x03, 0x16);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_SW");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_SW");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomOutOfRange)
@@ -202,21 +223,30 @@ TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceFmcNvdlinkFirst)
 {
     auto result = getResetReasonName(0xC1, 0x01, 0x03, 0x00);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SYS_RESET_N");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SYS_RESET_N");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceFmcNvdlinkSc7)
 {
     auto result = getResetReasonName(0xC1, 0x01, 0x03, 0x1E);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SC7");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SC7");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceFmcNvdlinkL0RstSys)
 {
     auto result = getResetReasonName(0xC1, 0x01, 0x03, 0x04);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "L0_RST_REQ_N_SYS");
+    if (result)
+    {
+        EXPECT_EQ(*result, "L0_RST_REQ_N_SYS");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceFmcOutOfRange)
@@ -246,7 +276,10 @@ TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameDenseFirst)
     }};
     auto result = findInstanceName(dense, 0x00);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "A");
+    if (result)
+    {
+        EXPECT_EQ(*result, "A");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameDenseLast)
@@ -258,7 +291,10 @@ TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameDenseLast)
     }};
     auto result = findInstanceName(dense, 0x02);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameDenseOutOfRange)
@@ -282,7 +318,10 @@ TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameSparseHitAfterGap)
     }};
     auto result = findInstanceName(sparse, 0x21);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "CARVEOUT_ROOT_SRAM");
+    if (result)
+    {
+        EXPECT_EQ(*result, "CARVEOUT_ROOT_SRAM");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, FindInstanceNameSparseGapMisses)
@@ -461,21 +500,30 @@ TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomUsbSameTable)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x03, 0x00);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SYS_RESET_N");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SYS_RESET_N");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceRomUsbLastEntry)
 {
     auto result = getResetReasonName(0xC0, 0x01, 0x03, 0x37);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SC7");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SC7");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceFmcInstanceZero)
 {
     auto result = getResetReasonName(0xC1, 0x01, 0x03, 0x00);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "SYS_RESET_N");
+    if (result)
+    {
+        EXPECT_EQ(*result, "SYS_RESET_N");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetResetSourceWrongSubclassMatchingOpcode)
@@ -800,21 +848,30 @@ TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiProgressInitBegin)
 {
     auto result = getOperationName(0x00, 0x00, 0x01, 0x00, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_CU_PC_INIT_BEGIN");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_CU_PC_INIT_BEGIN");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiProgressInitEnd)
 {
     auto result = getOperationName(0x00, 0x00, 0x01, 0x00, 0x0001);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_CU_PC_INIT_END");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_CU_PC_INIT_END");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiErrorKnown)
 {
     auto result = getOperationName(0x00, 0x07, 0x02, 0x00, 0x0002);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_CU_EC_NOT_SUPPORTED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_CU_EC_NOT_SUPPORTED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiAboveThreshold)
@@ -833,28 +890,40 @@ TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressEnable)
 {
     auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0004);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_PC_ENABLE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_PC_ENABLE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorNotConfigured)
 {
     auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0004);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_IOB_EC_NOT_CONFIGURED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_IOB_EC_NOT_CONFIGURED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiSoftwareProgressHandoff)
 {
     auto result = getOperationName(0x03, 0x00, 0x01, 0x00, 0x0006);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_SW_PC_HANDOFF_TO_NEXT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_SW_PC_HANDOFF_TO_NEXT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipKnown)
 {
     auto result = getOperationName(0x30, 0xC0, 0x02, 0x01, 0xC001);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_ROM_EC_I2C_EXT_MSG_FAIL");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_ROM_EC_I2C_EXT_MSG_FAIL");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipUnknownOpcode)
@@ -923,77 +992,110 @@ TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressDisable)
 {
     auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0002);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_PC_DISABLE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_PC_DISABLE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressReconfig)
 {
     auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0005);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_PC_RECONFIG");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_PC_RECONFIG");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralProgressRemoved)
 {
     auto result = getOperationName(0x01, 0x00, 0x01, 0x00, 0x0007);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_PC_REMOVED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_PC_REMOVED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorNonSpecific)
 {
     auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_EC_NON_SPECIFIC");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_EC_NON_SPECIFIC");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorDisabled)
 {
     auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0001);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_EC_DISABLED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_EC_DISABLED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiPeripheralErrorOutputError)
 {
     auto result = getOperationName(0x01, 0x00, 0x02, 0x00, 0x0008);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_P_EC_OUTPUT_ERROR");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_P_EC_OUTPUT_ERROR");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusProgressHotplug)
 {
     auto result = getOperationName(0x02, 0x00, 0x01, 0x00, 0x0006);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_IOB_PC_HOTPLUG");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_IOB_PC_HOTPLUG");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorDisabled)
 {
     auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0001);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_IOB_EC_DISABLED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_IOB_EC_DISABLED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorReadError)
 {
     auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0007);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_IOB_EC_READ_ERROR");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_IOB_EC_READ_ERROR");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiIoBusErrorResourceConflict)
 {
     auto result = getOperationName(0x02, 0x01, 0x02, 0x00, 0x0009);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_IOB_EC_RESOURCE_CONFLICT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_IOB_EC_RESOURCE_CONFLICT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNamePiSoftwareErrorFvCorrupted)
 {
     auto result = getOperationName(0x03, 0x00, 0x02, 0x00, 0x0013);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_SW_EC_FV_CORRUPTED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_SW_EC_FV_CORRUPTED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest,
@@ -1001,7 +1103,10 @@ TEST_F(NvidiaPostCodeHandlerTest,
 {
     auto result = getOperationName(0x03, 0x00, 0x02, 0x00, 0x0014);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "EFI_SW_EC_INCONSISTENT_MEMORY_MAP");
+    if (result)
+    {
+        EXPECT_EQ(*result, "EFI_SW_EC_INCONSISTENT_MEMORY_MAP");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetSubclassNameSipBpmpFw)
@@ -1048,180 +1153,258 @@ TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRomBootModeSel)
 {
     auto result = getOperationName(0x30, 0xC0, 0x01, 0x02, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_ROM_PC_BOOT_MODE_SEL_DONE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_ROM_PC_BOOT_MODE_SEL_DONE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRomRomExit)
 {
     auto result = getOperationName(0x30, 0xC0, 0x01, 0x0B, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_ROM_PC_ROM_EXIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_ROM_PC_ROM_EXIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcInit)
 {
     auto result = getOperationName(0x30, 0xC1, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_FMC_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_FMC_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcBootstrap)
 {
     auto result = getOperationName(0x30, 0xC1, 0x01, 0x09, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_FMC_PC_BOOTSTRAP");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_FMC_PC_BOOTSTRAP");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcStage1AuthFailed)
 {
     auto result = getOperationName(0x30, 0xC1, 0x02, 0x09, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_FMC_EC_STAGE1_AUTHENTICATION_FAILED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscFmcMemFuseCrcFailed)
 {
     auto result = getOperationName(0x30, 0xC1, 0x02, 0x0D, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_FMC_EC_MEM_FUSE_CRC_FAILED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_FMC_EC_MEM_FUSE_CRC_FAILED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPscRtInit)
 {
     auto result = getOperationName(0x30, 0xC2, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PSC_RT_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PSC_RT_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1Init)
 {
     auto result = getOperationName(0x30, 0xC3, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MB1_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MB1_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1Exit)
 {
     auto result = getOperationName(0x30, 0xC3, 0x01, 0x12, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MB1_PC_EXIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MB1_PC_EXIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1FuseIntegrityFailed)
 {
     auto result = getOperationName(0x30, 0xC3, 0x02, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MB1_EC_FUSE_RECORD_INTEGRITY_FAILED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MB1_EC_FUSE_RECORD_INTEGRITY_FAILED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb1UcfError)
 {
     auto result = getOperationName(0x30, 0xC3, 0x02, 0x19, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MB1_EC_UCF_ERROR");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MB1_EC_UCF_ERROR");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBpmpFwInitComplete)
 {
     auto result = getOperationName(0x30, 0xC4, 0x01, 0x3F, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "BPMP_FW_PC_INIT_COMPLETE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "BPMP_FW_PC_INIT_COMPLETE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMb2SetHwBreakpoint)
 {
     auto result = getOperationName(0x30, 0xC5, 0x01, 0x03, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MB2_PC_SET_HW_BREAK_POINT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MB2_PC_SET_HW_BREAK_POINT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBl31BootComplete)
 {
     auto result = getOperationName(0x30, 0xC6, 0x01, 0x07, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "BL31_PC_BOOT_COMPLETE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "BL31_PC_BOOT_COMPLETE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipBl31PscMailboxUnavail)
 {
     auto result = getOperationName(0x30, 0xC6, 0x02, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "BL31_EC_PSC_MAILBOX_UNAVAIL");
+    if (result)
+    {
+        EXPECT_EQ(*result, "BL31_EC_PSC_MAILBOX_UNAVAIL");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipOobhubMctpInit)
 {
     auto result = getOperationName(0x30, 0xCB, 0x01, 0x03, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "OOBHUB_PC_MCTP_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "OOBHUB_PC_MCTP_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipRasFwMgmtReady)
 {
     auto result = getOperationName(0x30, 0xCC, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "RAS_FW_PC_MGMT_READY");
+    if (result)
+    {
+        EXPECT_EQ(*result, "RAS_FW_PC_MGMT_READY");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipMseqFwBootComplete)
 {
     auto result = getOperationName(0x30, 0xCD, 0x01, 0x03, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "MSEQ_FW_PC_BOOT_COMPLETE");
+    if (result)
+    {
+        EXPECT_EQ(*result, "MSEQ_FW_PC_BOOT_COMPLETE");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPcore0FwInit)
 {
     auto result = getOperationName(0x30, 0xCE, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PCORE0_FW_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PCORE0_FW_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipPcore0FwUphyInitFailed)
 {
     auto result = getOperationName(0x30, 0xCE, 0x02, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "PCORE0_FW_EC_UPHY_INIT_FAILED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "PCORE0_FW_EC_UPHY_INIT_FAILED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cGrs0PcInit)
 {
     auto result = getOperationName(0x30, 0xD4, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_GRS0_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_GRS0_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cGrs0PcTraining)
 {
     auto result = getOperationName(0x30, 0xD4, 0x01, 0x02, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_GRS0_PC_TRAINING");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_GRS0_PC_TRAINING");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy0PcTraining)
 {
     auto result = getOperationName(0x30, 0xD6, 0x01, 0x02, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_UPHY0_PC_TRAINING");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_UPHY0_PC_TRAINING");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy5PcInit)
 {
     auto result = getOperationName(0x30, 0xDB, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_UPHY5_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_UPHY5_PC_INIT");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cUphy5EcTrainingFailed)
 {
     auto result = getOperationName(0x30, 0xDB, 0x02, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_UPHY5_EC_TRAINING_FAILED");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_UPHY5_EC_TRAINING_FAILED");
+    }
 }
 
 TEST_F(NvidiaPostCodeHandlerTest, GetOperationNameSipC2cLpiS0PcInit)
 {
     auto result = getOperationName(0x30, 0xDC, 0x01, 0x01, 0x0000);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result, "C2C_LPI_S0_PC_INIT");
+    if (result)
+    {
+        EXPECT_EQ(*result, "C2C_LPI_S0_PC_INIT");
+    }
 }

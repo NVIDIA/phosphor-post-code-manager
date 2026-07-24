@@ -745,9 +745,15 @@ TEST_F(PostCodeTest, FromJsonPostCodeHandlerWithMask)
     from_json(j, handler);
 
     EXPECT_TRUE(handler.mask.has_value());
-    EXPECT_EQ(handler.mask->size(), 2);
+    if (handler.mask)
+    {
+        EXPECT_EQ(handler.mask->size(), 2);
+    }
     EXPECT_TRUE(handler.resolution.has_value());
-    EXPECT_EQ(*handler.resolution, "Test resolution");
+    if (handler.resolution)
+    {
+        EXPECT_EQ(*handler.resolution, "Test resolution");
+    }
 }
 
 TEST_F(PostCodeTest, DeserializeInvalidVersion)
@@ -2095,7 +2101,10 @@ TEST_F(PostCodeTest, FromJsonPostCodeHandlerEventOnly)
     PostCodeHandler handler;
     from_json(j, handler);
     EXPECT_TRUE(handler.event.has_value());
-    EXPECT_EQ(handler.event->name, "E");
+    if (handler.event)
+    {
+        EXPECT_EQ(handler.event->name, "E");
+    }
     EXPECT_FALSE(handler.mask.has_value());
     EXPECT_FALSE(handler.resolution.has_value());
 }
@@ -2110,9 +2119,15 @@ TEST_F(PostCodeTest, FromJsonPostCodeHandlerMaskAndResolutionOnly)
     PostCodeHandler handler;
     from_json(j, handler);
     EXPECT_TRUE(handler.mask.has_value());
-    EXPECT_EQ(handler.mask->size(), 2);
+    if (handler.mask)
+    {
+        EXPECT_EQ(handler.mask->size(), 2);
+    }
     EXPECT_TRUE(handler.resolution.has_value());
-    EXPECT_EQ(*handler.resolution, "Res");
+    if (handler.resolution)
+    {
+        EXPECT_EQ(*handler.resolution, "Res");
+    }
     EXPECT_FALSE(handler.secondary.has_value());
     EXPECT_TRUE(handler.targets.empty());
 }
