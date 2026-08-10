@@ -151,6 +151,7 @@ TEST_F(PostCodeHandlersTest, FindWithMaskNoMatch)
 
 TEST_F(PostCodeHandlersTest, FindWithMaskSizeMismatch)
 {
+    // Length-mismatched mask is skipped, not silently exact-matched.
     PostCodeHandlers handlers;
 
     PostCodeHandler handler;
@@ -159,6 +160,24 @@ TEST_F(PostCodeHandlersTest, FindWithMaskSizeMismatch)
     handlers.handlers.push_back(handler);
 
     primarycode_t primary = {0x01, 0x02};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    const PostCodeHandler* result = handlers.findWithMask(code);
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(PostCodeHandlersTest, FindWithMaskAllZeroIsNotWildcard)
+{
+    // All-zero mask (wildcard) is refused, not matched against every code.
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x01, 0x02};
+    handler.mask = {0x00, 0x00};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x99, 0x99};
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
@@ -360,6 +379,7 @@ TEST_F(PostCodeHandlersTest, LoadFromJson)
 
 TEST_F(PostCodeHandlersTest, LoadFromJsonInvalid)
 {
+    // Malformed config is swallowed (no throw), leaving handlers empty.
     PostCodeHandlers handlers;
 
     std::filesystem::path tempFile =
@@ -368,9 +388,41 @@ TEST_F(PostCodeHandlersTest, LoadFromJsonInvalid)
     jsonFile << "invalid json";
     jsonFile.close();
 
-    EXPECT_THROW(handlers.load(tempFile.string()), std::exception);
+    EXPECT_NO_THROW(handlers.load(tempFile.string()));
+    EXPECT_TRUE(handlers.handlers.empty());
 
     std::filesystem::remove(tempFile);
+}
+
+TEST_F(PostCodeHandlersTest, LoadFromMissingFileDoesNotThrow)
+{
+    // A missing/unreadable config must not abort the daemon; load() leaves the
+    // handler list empty and the service keeps running.
+    PostCodeHandlers handlers;
+    std::filesystem::path missing =
+        std::filesystem::temp_directory_path() / "pcm_nonexistent_config.json";
+    std::filesystem::remove(missing);
+
+    EXPECT_NO_THROW(handlers.load(missing.string()));
+    EXPECT_TRUE(handlers.handlers.empty());
+}
+
+TEST_F(PostCodeHandlersTest, FindWithMaskNonZeroPartialMaskMatches)
+{
+    // A well-formed, non-zero mask matches codes that agree on the masked bits.
+    PostCodeHandlers handlers;
+
+    PostCodeHandler handler;
+    handler.primary = {0x12, 0x00};
+    handler.mask = {0xFF, 0x00};
+    handlers.handlers.push_back(handler);
+
+    primarycode_t primary = {0x12, 0xAB};
+    secondarycode_t secondary = {};
+    postcode_t code = std::make_tuple(primary, secondary);
+
+    const PostCodeHandler* result = handlers.findWithMask(code);
+    EXPECT_NE(result, nullptr);
 }
 
 TEST_F(PostCodeHandlersTest, HandleWithResolution)
@@ -598,6 +650,7 @@ TEST_F(PostCodeHandlersTest, FindWithMaskMaskMatchFirstHandlerSkipSecond)
 
 TEST_F(PostCodeHandlersTest, FindWithMaskMaskSizeMismatchSkipsHandler)
 {
+    // Size-mismatched mask is skipped, not silently exact-matched.
     PostCodeHandlers handlers;
 
     PostCodeHandler handler;
