@@ -37,7 +37,18 @@ int main(int argc, char* argv[])
         switch (arg)
         {
             case 'h':
-                node = std::stoi(optarg);
+                try
+                {
+                    node = std::stoi(optarg);
+                }
+                catch (const std::exception& e)
+                {
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        "Invalid --host argument: expected a numeric node index",
+                        phosphor::logging::entry("VALUE=%s", optarg),
+                        phosphor::logging::entry("WHAT=%s", e.what()));
+                    return -1;
+                }
                 break;
             case 'c':
                 handlers.load(optarg);

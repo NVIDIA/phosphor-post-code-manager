@@ -28,6 +28,7 @@
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/exception.hpp>
 
+#include <algorithm>
 #include <format>
 #include <iomanip>
 
@@ -48,9 +49,17 @@ const PostCodeHandler* PostCodeHandlers::findWithMask(postcode_t code)
     {
         bool primaryMatches = false;
 
+        // NVIDIA: Check if mask is defined for flexible matching
         if (handler.mask && handler.mask->size() == handler.primary.size() &&
             handler.mask->size() == primaryCode.size())
         {
+            // All-zero mask would match every code (wildcard); refuse it.
+            if (std::all_of(handler.mask->begin(), handler.mask->end(),
+                            [](uint8_t b) { return b == 0; }))
+            {
+                continue;
+            }
+            // NVIDIA: Apply mask: match if (code & mask) == (primary & mask)
             const auto& mask = handler.mask.value();
             primaryMatches = true;
             for (size_t i = 0; i < primaryCode.size(); ++i)
@@ -223,9 +232,94 @@ void PostCodeHandlers::handle(sdbusplus::bus_t& bus, postcode_t code)
 
 void PostCodeHandlers::load(const std::string& path)
 {
-    std::ifstream ifs(path);
-    handlers = json::parse(ifs).template get<std::vector<PostCodeHandler>>();
-    ifs.close();
+    try
+    {
+        std::ifstream ifs(path);
+        handlers =
+            json::parse(ifs).template get<std::vector<PostCodeHandler>>();
+        ifs.close();
+    }
+    catch (const std::exception& e)
+    {
+        // Malformed config must not abort the daemon; continue empty.
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "Failed to load post code handler config; continuing with none",
+            phosphor::logging::entry("PATH=%s", path.c_str()),
+            phosphor::logging::entry("WHAT=%s", e.what()));
+        handlers.clear();
+    }
+}
+
+void PostCode::onRawChanged(sdbusplus::message_t& msg)
+{
+    try
+    {
+        std::string intfName;
+        std::map<std::string, std::variant<postcode_t>> msgData;
+        msg.read(intfName, msgData);
+        // Check if it was the Value property that changed.
+        auto valPropMap = msgData.find("Value");
+        if (valPropMap != msgData.end())
+        {
+            savePostCodes(std::get<postcode_t>(valPropMap->second));
+        }
+    }
+    catch (const std::exception& e)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "Ignoring malformed Boot.Raw PropertiesChanged signal",
+            phosphor::logging::entry("WHAT=%s", e.what()));
+    }
+}
+
+void PostCode::onHostStateChanged(sdbusplus::message_t& msg)
+{
+    try
+    {
+        std::string intfName;
+        std::map<std::string, std::variant<std::string>> msgData;
+        msg.read(intfName, msgData);
+        // Check if it was the CurrentHostState property that changed.
+        auto valPropMap = msgData.find("CurrentHostState");
+        if (valPropMap == msgData.end())
+        {
+            return;
+        }
+        const std::string& hostStateStr =
+            std::get<std::string>(valPropMap->second);
+        StateServer::Host::HostState currentHostState;
+        try
+        {
+            currentHostState =
+                StateServer::Host::convertHostStateFromString(hostStateStr);
+        }
+        catch (const sdbusplus::exception::InvalidEnumString& e)
+        {
+            phosphor::logging::log<phosphor::logging::level::WARNING>(
+                "Ignoring CurrentHostState change: invalid or empty value",
+                phosphor::logging::entry("WHAT=%s", e.what()));
+            return;
+        }
+        if (currentHostState == StateServer::Host::HostState::Off)
+        {
+            if (postCodes.empty())
+            {
+                std::cerr << "HostState changed to OFF. Empty "
+                             "postcode log, keep boot cycle at "
+                          << currentBootCycleIndex << std::endl;
+            }
+            else
+            {
+                postCodes.clear();
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "Ignoring malformed State.Host PropertiesChanged signal",
+            phosphor::logging::entry("WHAT=%s", e.what()));
+    }
 }
 
 void PostCode::deleteAll()
@@ -381,12 +475,7 @@ fs::path PostCode::serialize(const fs::path& path)
         cereal::BinaryOutputArchive versionArchive(osVersion);
         versionArchive(PostCodeDataVersion);
     }
-    catch (const cereal::Exception& e)
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(e.what());
-        return "";
-    }
-    catch (const fs::filesystem_error& e)
+    catch (const std::exception& e)
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(e.what());
         return "";
@@ -434,13 +523,11 @@ bool PostCode::deserializePostCodes(const fs::path& path,
         }
         return false;
     }
-    catch (const cereal::Exception& e)
+    catch (const std::exception& e)
     {
+        // Corrupt archive may bad_alloc; don't abort, drop partial data.
+        codes.clear();
         phosphor::logging::log<phosphor::logging::level::ERR>(e.what());
-        return false;
-    }
-    catch (const fs::filesystem_error& e)
-    {
         return false;
     }
     return false;

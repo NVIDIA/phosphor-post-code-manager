@@ -277,6 +277,23 @@ struct DeserializePostCodesTag
 template struct PrivateMemberAccessor<DeserializePostCodesTag,
                                       &PostCode::deserializePostCodes>;
 
+struct OnRawChangedTag
+{
+    using type = void (PostCode::*)(sdbusplus::message_t&);
+    friend type getPrivateMember(OnRawChangedTag);
+};
+
+template struct PrivateMemberAccessor<OnRawChangedTag, &PostCode::onRawChanged>;
+
+struct OnHostStateChangedTag
+{
+    using type = void (PostCode::*)(sdbusplus::message_t&);
+    friend type getPrivateMember(OnHostStateChangedTag);
+};
+
+template struct PrivateMemberAccessor<OnHostStateChangedTag,
+                                      &PostCode::onHostStateChanged>;
+
 } // namespace
 
 class TestablePostCode : public PostCode
@@ -1351,6 +1368,99 @@ TEST_F(PostCodeTest, DeserializePostCodesFilesystemErrorDuplicate)
     EXPECT_NO_THROW(codes = postCode2.getPostCodes(999));
 }
 
+TEST_F(PostCodeTest, GetPostCodesOversizedArchiveReturnsEmpty)
+{
+    // A container-size field larger than vector::max_size() makes cereal throw
+    // std::length_error before any allocation; the read path must catch it,
+    // discard the partial map, and return empty without crashing.
+    const std::string prefix = "/tmp/pcm-oversized-test/host";
+    fs::path hostPath = prefix + "0";
+    fs::remove_all(hostPath);
+    fs::create_directories(hostPath);
+    {
+        std::ofstream osVer(hostPath / "PostCodeDataVersion", std::ios::binary);
+        cereal::BinaryOutputArchive verArchive(osVer);
+        verArchive(static_cast<uint16_t>(PostCodeDataVersion));
+    }
+    {
+        std::ofstream osIdx(hostPath / "CurrentBootCycleIndex",
+                            std::ios::binary);
+        cereal::BinaryOutputArchive idxArchive(osIdx);
+        idxArchive(static_cast<uint16_t>(1));
+    }
+    {
+        std::ofstream osCnt(hostPath / "CurrentBootCycleCount",
+                            std::ios::binary);
+        cereal::BinaryOutputArchive cntArchive(osCnt);
+        cntArchive(static_cast<uint16_t>(1));
+    }
+    {
+        // Binary map layout: size=1, key=0, first vector size = SIZE_MAX.
+        std::ofstream bad(hostPath / "1", std::ios::binary);
+        uint64_t mapSize = 1;
+        uint64_t key = 0;
+        uint64_t vecSize = 0xFFFFFFFFFFFFFFFFULL;
+        bad.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+        bad.write(reinterpret_cast<const char*>(&key), sizeof(key));
+        bad.write(reinterpret_cast<const char*>(&vecSize), sizeof(vecSize));
+    }
+
+    EventPtr eventPtr2;
+    sd_event* event2 = nullptr;
+    sd_event_default(&event2);
+    eventPtr2.reset(event2);
+
+    PostCodeHandlers handlers2;
+    PostCode postCode2(bus, "/test/path_oversized", eventPtr2, 0, handlers2,
+                       prefix);
+
+    std::vector<postcode_t> result;
+    EXPECT_NO_THROW({ result = postCode2.getPostCodes(1); });
+    EXPECT_TRUE(result.empty());
+
+    fs::remove_all(hostPath);
+}
+
+TEST_F(PostCodeTest, MalformedRawSignalDoesNotCrash)
+{
+    // A structurally malformed Boot.Raw PropertiesChanged signal must be caught
+    // by the callback guard and must not propagate out (would crash daemon).
+    auto signal =
+        bus.new_signal("/xyz/openbmc_project/state/boot/raw0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    signal.append(std::string("xyz.openbmc_project.State.Boot.Raw"));
+    signal.append(std::string("malformed-not-a-map"));
+    signal.append(std::vector<std::string>{});
+    EXPECT_NO_THROW({
+        signal.signal_send();
+        for (int i = 0; i < 10; ++i)
+        {
+            bus.process();
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    });
+}
+
+TEST_F(PostCodeTest, MalformedHostStateSignalDoesNotCrash)
+{
+    // A structurally malformed State.Host PropertiesChanged signal must be
+    // caught by the callback guard and must not propagate out.
+    auto signal =
+        bus.new_signal("/xyz/openbmc_project/state/host0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    signal.append(std::string("xyz.openbmc_project.State.Host"));
+    signal.append(std::string("malformed-not-a-map"));
+    signal.append(std::vector<std::string>{});
+    EXPECT_NO_THROW({
+        signal.signal_send();
+        for (int i = 0; i < 10; ++i)
+        {
+            bus.process();
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    });
+}
+
 TEST_F(PostCodeTest, GetBootNumWrapAround)
 {
     fs::path versionPath = postCodeListPath / "PostCodeDataVersion";
@@ -2132,7 +2242,7 @@ TEST_F(PostCodeTest, FromJsonPostCodeHandlerMaskAndResolutionOnly)
     EXPECT_TRUE(handler.targets.empty());
 }
 
-TEST_F(PostCodeTest, DeserializePostCodesPathIsDirectoryThrows)
+TEST_F(PostCodeTest, DeserializePostCodesPathIsDirectoryDoesNotThrow)
 {
     fs::path dirPath = testDir / "dir_as_file0";
     fs::create_directories(dirPath);
@@ -2156,7 +2266,10 @@ TEST_F(PostCodeTest, DeserializePostCodesPathIsDirectoryThrows)
     PostCodeHandlers handlers2;
     std::string pathPrefix = (testDir / "dir_as_file").string();
     PostCode postCode2(bus, "/test/path2", eventPtr2, 0, handlers2, pathPrefix);
-    EXPECT_THROW({ postCode2.getPostCodes(1); }, std::exception);
+    // Corrupt/unreadable archive must not throw; returns empty, no abort.
+    std::vector<postcode_t> result;
+    EXPECT_NO_THROW({ result = postCode2.getPostCodes(1); });
+    EXPECT_TRUE(result.empty());
 }
 
 TEST_F(PostCodeTest, GetBootNumWrapAroundDetailed)
@@ -2625,4 +2738,96 @@ TEST_F(PostCodeTest, SavePostCodesTimerStartWhenNotRunning)
 
     auto codes = postCode->getPostCodes(1);
     EXPECT_GE(codes.size(), 2);
+}
+
+// A truncated archive makes cereal throw while reading the stored value.
+// deserialize must report failure instead of letting the exception escape.
+// The file is truncated rather than carrying a bogus size prefix so no
+// oversized allocation is attempted (that aborts under valgrind).
+TEST_F(PostCodeTest, DeserializeCorruptArchiveReturnsFalse)
+{
+    fs::path corrupt = testDir / "corrupt_index";
+    {
+        std::ofstream ofs(corrupt, std::ios::binary);
+        const char byte = 0x01;
+        ofs.write(&byte, sizeof(byte));
+    }
+
+    auto deserialize = getPrivateMember(DeserializeTag{});
+    uint16_t index = 0;
+
+    EXPECT_FALSE((postCode.get()->*deserialize)(corrupt, index));
+}
+
+// A corrupt post-code archive must not leave partially decoded entries behind:
+// deserializePostCodes reports failure and clears the output map.
+TEST_F(PostCodeTest, DeserializePostCodesCorruptArchiveClearsCodes)
+{
+    fs::path corrupt = testDir / "corrupt_codes";
+    {
+        std::ofstream ofs(corrupt, std::ios::binary);
+        const char bytes[] = {0x01, 0x02, 0x03};
+        ofs.write(bytes, sizeof(bytes));
+    }
+
+    auto deserializePostCodes = getPrivateMember(DeserializePostCodesTag{});
+    std::map<uint64_t, postcode_t> codes;
+    primarycode_t primary = {0xAA};
+    secondarycode_t secondary = {};
+    codes[1] = std::make_tuple(primary, secondary);
+
+    EXPECT_FALSE((postCode.get()->*deserializePostCodes)(corrupt, codes));
+    EXPECT_TRUE(codes.empty());
+}
+
+// decodeHexString rejects on three independent conditions; the existing tests
+// only exercise the "too short" one. Cover the odd-length and missing-prefix
+// arms as well.
+TEST_F(PostCodeTest, DecodeHexStringOddLengthThrows)
+{
+    // Long enough and 0x-prefixed, but an odd number of characters.
+    EXPECT_THROW(decodeHexString("0x123"), std::runtime_error);
+}
+
+TEST_F(PostCodeTest, DecodeHexStringMissingPrefixThrows)
+{
+    // Long enough and even length, but not 0x-prefixed.
+    EXPECT_THROW(decodeHexString("1234"), std::runtime_error);
+}
+
+// A malformed Boot.Raw PropertiesChanged signal must be swallowed by the
+// handler guard rather than escaping and killing the Restart=always daemon.
+TEST_F(PostCodeTest, OnRawChangedMalformedMessageIsIgnored)
+{
+    ON_CALL(*bus_mock,
+            sd_bus_message_read_basic(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Return(-EINVAL));
+    EXPECT_CALL(*bus_mock,
+                sd_bus_message_read_basic(testing::_, testing::_, testing::_))
+        .WillRepeatedly(testing::Return(-EINVAL));
+
+    auto msg =
+        bus.new_signal("/xyz/openbmc_project/state/boot/raw0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    auto onRawChanged = getPrivateMember(OnRawChangedTag{});
+
+    EXPECT_NO_THROW((postCode.get()->*onRawChanged)(msg));
+}
+
+// Same guarantee for the State.Host handler.
+TEST_F(PostCodeTest, OnHostStateChangedMalformedMessageIsIgnored)
+{
+    ON_CALL(*bus_mock,
+            sd_bus_message_read_basic(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Return(-EINVAL));
+    EXPECT_CALL(*bus_mock,
+                sd_bus_message_read_basic(testing::_, testing::_, testing::_))
+        .WillRepeatedly(testing::Return(-EINVAL));
+
+    auto msg =
+        bus.new_signal("/xyz/openbmc_project/state/host0",
+                       "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    auto onHostStateChanged = getPrivateMember(OnHostStateChangedTag{});
+
+    EXPECT_NO_THROW((postCode.get()->*onHostStateChanged)(msg));
 }

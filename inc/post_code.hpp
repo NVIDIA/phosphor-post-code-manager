@@ -109,63 +109,14 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
             sdbusplus::bus::match::rules::propertiesChanged(
                 PostCodePath + std::to_string(node),
                 "xyz.openbmc_project.State.Boot.Raw"),
-            [this](sdbusplus::message_t& msg) {
-                std::string intfName;
-                std::map<std::string, std::variant<postcode_t>> msgData;
-                msg.read(intfName, msgData);
-                // Check if it was the Value property that changed.
-                auto valPropMap = msgData.find("Value");
-                if (valPropMap != msgData.end())
-                {
-                    this->savePostCodes(
-                        std::get<postcode_t>(valPropMap->second));
-                }
-            }),
+            [this](sdbusplus::message_t& msg) { this->onRawChanged(msg); }),
         propertiesChangedSignalCurrentHostState(
             bus,
             sdbusplus::bus::match::rules::propertiesChanged(
                 HostStatePathPrefix + std::to_string(node),
                 "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message_t& msg) {
-                std::string intfName;
-                std::map<std::string, std::variant<std::string>> msgData;
-                msg.read(intfName, msgData);
-                // Check if it was the Value property that changed.
-                auto valPropMap = msgData.find("CurrentHostState");
-                if (valPropMap != msgData.end())
-                {
-                    const std::string& hostStateStr =
-                        std::get<std::string>(valPropMap->second);
-                    StateServer::Host::HostState currentHostState;
-                    try
-                    {
-                        currentHostState =
-                            StateServer::Host::convertHostStateFromString(
-                                hostStateStr);
-                    }
-                    catch (const sdbusplus::exception::InvalidEnumString& e)
-                    {
-                        phosphor::logging::log<
-                            phosphor::logging::level::WARNING>(
-                            "Ignoring CurrentHostState change: invalid or empty value",
-                            phosphor::logging::entry("WHAT=%s", e.what()));
-                        return;
-                    }
-                    if (currentHostState == StateServer::Host::HostState::Off)
-                    {
-                        if (this->postCodes.empty())
-                        {
-                            std::cerr
-                                << "HostState changed to OFF. Empty "
-                                   "postcode log, keep boot cycle at "
-                                << this->currentBootCycleIndex << std::endl;
-                        }
-                        else
-                        {
-                            this->postCodes.clear();
-                        }
-                    }
-                }
+                this->onHostStateChanged(msg);
             }),
         postCodeHandlers(std::move(handlers))
     {
@@ -205,6 +156,9 @@ struct PostCode : sdbusplus::server::object_t<post_code, delete_all>
     void savePostCodes(postcode_t code);
 
   private:
+    // Signal handlers; guard malformed input so the daemon cannot be crashed.
+    void onRawChanged(sdbusplus::message_t& msg);
+    void onHostStateChanged(sdbusplus::message_t& msg);
     void incrBootCycle();
     uint16_t getBootNum(const uint16_t index) const;
 
