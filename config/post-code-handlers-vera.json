@@ -564,13 +564,6 @@
 		"resolution": "A DOT operation has failed. The failed operation type is indicated in the instance field. The device will reset. Re-attempt the DOT operation. If the issue persists, contact NVIDIA."
 	},
 	{
-		"name": "PSC_FMC_EC_EARLY_BOOTVARS_LOAD_FAILED",
-		"description": "Failed to load valid early boot variable",
-		"primary": "0xB0C1C011",
-		"mask": "0xFEFF003F",
-		"resolution": "No valid early boot variable (CMOS) data was found. The system will boot with default settings from BCT records. Any custom settings previously configured through the UEFI menu will need to be reapplied. If this error is seen repeatedly, it may indicate a hardware issue. Contact NVIDIA if the problem persists."
-	},
-	{
 		"name": "PSC_FMC_ED_PRECHANGE_SCB_FAILED",
 		"description": "Socket ID pre-WAR SCB failed",
 		"primary": "0xB0C1C012",
