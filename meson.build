@@ -124,6 +124,8 @@ executable(
 
 build_tests = get_option('tests')
 
+subdir('prebootdiag')
+
 if build_tests.allowed()
     subdir('test')
 endif
