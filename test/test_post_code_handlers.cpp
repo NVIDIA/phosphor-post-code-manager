@@ -29,8 +29,10 @@
 #include <gtest/gtest.h>
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::StrEq;
 using ::testing::Throw;
 
 class PostCodeHandlersTest : public ::testing::Test
@@ -234,10 +236,17 @@ TEST_F(PostCodeHandlersTest, HandleWithTargets)
     secondarycode_t secondary = {};
     postcode_t code = std::make_tuple(primary, secondary);
 
+    EXPECT_CALL(*bus_mock, sd_bus_message_new_method_call(_, _, _, _, _, _))
+        .Times(AnyNumber());
+    EXPECT_CALL(*bus_mock, sd_bus_message_new_method_call(
+                               _, _, _, _, _, StrEq("GetUnitFileState")));
+    EXPECT_CALL(*bus_mock, sd_bus_message_new_method_call(_, _, _, _, _,
+                                                          StrEq("StartUnit")));
+
     EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
-TEST_F(PostCodeHandlersTest, HandleTargetGetUnitFailureContinues)
+TEST_F(PostCodeHandlersTest, HandleTargetUnitFileMissingContinues)
 {
     PostCodeHandlers handlers;
 
@@ -255,13 +264,13 @@ TEST_F(PostCodeHandlersTest, HandleTargetGetUnitFailureContinues)
     EXPECT_NO_THROW(handlers.handle(bus, code));
 }
 
-TEST_F(PostCodeHandlersTest, HandleTargetGetUnitRuntimeErrorPropagates)
+TEST_F(PostCodeHandlersTest, HandleTargetUnitFileStateRuntimeErrorPropagates)
 {
     PostCodeHandlers handlers;
 
     PostCodeHandler handler;
     handler.primary = {0x01, 0x02};
-    handler.targets = {"throwing-getunit.target"};
+    handler.targets = {"throwing-unitfilestate.target"};
     handlers.handlers.push_back(handler);
 
     primarycode_t primary = {0x01, 0x02};
@@ -269,7 +278,7 @@ TEST_F(PostCodeHandlersTest, HandleTargetGetUnitRuntimeErrorPropagates)
     postcode_t code = std::make_tuple(primary, secondary);
 
     EXPECT_CALL(*bus_mock, sd_bus_call(_, _, _, _, _))
-        .WillOnce(Throw(std::runtime_error("get unit")));
+        .WillOnce(Throw(std::runtime_error("unit file state")));
 
     EXPECT_THROW(handlers.handle(bus, code), std::runtime_error);
 }

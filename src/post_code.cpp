@@ -205,8 +205,9 @@ void PostCodeHandlers::handle(sdbusplus::bus_t& bus, postcode_t code)
     {
         try
         {
-            auto check = bus.new_method_call(SYSTEMD_SERVICE, SYSTEMD_ROOT,
-                                             SYSTEMD_INTERFACE, "GetUnit");
+            auto check =
+                bus.new_method_call(SYSTEMD_SERVICE, SYSTEMD_ROOT,
+                                    SYSTEMD_INTERFACE, "GetUnitFileState");
             check.append(target);
             bus.call(check);
         }
