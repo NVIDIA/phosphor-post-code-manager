@@ -301,11 +301,12 @@ void PostCode::onHostStateChanged(sdbusplus::message_t& msg)
                 phosphor::logging::entry("WHAT=%s", e.what()));
             return;
         }
-        if (currentHostState == StateServer::Host::HostState::Off)
+        if (currentHostState == StateServer::Host::HostState::Off ||
+            currentHostState == StateServer::Host::HostState::Standby)
         {
             if (postCodes.empty())
             {
-                std::cerr << "HostState changed to OFF. Empty "
+                std::cerr << "HostState changed to OFF or Standby. Empty "
                              "postcode log, keep boot cycle at "
                           << currentBootCycleIndex << std::endl;
             }
